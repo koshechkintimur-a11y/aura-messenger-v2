@@ -7,7 +7,7 @@ enum MessageType: String {
     case system
 }
 
-struct AuraMessage: Identifiable {
+struct AuraMessage: Identifiable, Equatable {
     let id = UUID()
     let text: String
     let time: Date

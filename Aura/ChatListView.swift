@@ -25,7 +25,9 @@ struct ChatListView: View {
     @State private var newFolderName: String = ""
     
     private var folders: [String] {
-        Array(Set(rooms.map { $0.folder })).sorted()
+        let allFolders = rooms.map { $0.folder }
+        let uniqueFolders = Set(allFolders)
+        return Array(uniqueFolders).sorted()
     }
     
     private var filteredRooms: [RoomInfo] {
@@ -138,23 +140,6 @@ struct ChatRow: View {
             }
         }
         .padding(.vertical, 4)
-    }
-}
-
-struct ChatRoomView: View {
-    let room: RoomInfo
-    
-    var body: some View {
-        VStack {
-            Text("Чат: \(room.name)")
-                .font(.title)
-                .foregroundColor(.primary)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.black)
-        .navigationTitle(room.name)
-        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

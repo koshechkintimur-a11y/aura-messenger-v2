@@ -76,7 +76,7 @@ struct ChatInfoView: View {
             }
             .listStyle(.insetGrouped)
             .background(Color.black.ignoresSafeArea())
-            .navigationTitle("Информация о чате", displayMode: .inline)
+            .navigationTitle("Информация о чате")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
