@@ -1,148 +1,126 @@
 import SwiftUI
 
-struct RoomInfo: Identifiable, Hashable {
-    let id: String
+struct RoomInfo: Identifiable {
+    let id = UUID()
     var name: String
     var lastMessage: String
     var time: String
     var folder: String
-    var avatarLetter: String
 }
 
 struct ChatListView: View {
     @State private var rooms: [RoomInfo] = [
-        RoomInfo(id: "1", name: "Общий чат", lastMessage: "Привет всем! Как дела?", time: "10:42", folder: "Все чаты", avatarLetter: "О"),
-        RoomInfo(id: "2", name: "Разработка", lastMessage: "Обновили зависимости", time: "09:15", folder: "Все чаты", avatarLetter: "Р"),
-        RoomInfo(id: "3", name: "Дизайн", lastMessage: "Новые макеты готовы", time: "Вчера", folder: "Все чаты", avatarLetter: "Д"),
-        RoomInfo(id: "4", name: "Тестировщики", lastMessage: "Баг воспроизводится", time: "Вчера", folder: "Работа", avatarLetter: "Т"),
-        RoomInfo(id: "5", name: "HR", lastMessage: "Встреча в пятницу", time: "Пн", folder: "Работа", avatarLetter: "H"),
-        RoomInfo(id: "6", name: "Семья", lastMessage: "Ужин в 19:00", time: "Вс", folder: "Личное", avatarLetter: "С"),
+        RoomInfo(name: "Семейный чат", lastMessage: "Привет!", time: "12:34", folder: "Семья"),
+        RoomInfo(name: "Рабочая группа", lastMessage: "Файлы готовы", time: "09:15", folder: "Работа"),
     ]
-    
-    @State private var selectedFolder: String = "Все чаты"
+    @State private var selectedFolder = "Все чаты"
     @State private var showingCreateRoom = false
     @State private var showingNewFolder = false
-    @State private var newFolderName: String = ""
+    @State private var newFolderName = ""
+    
+    let accentColor = Color(red: 0, green: 0.48, blue: 1.0)
     
     private var folders: [String] {
-        let allFolders = rooms.map { $0.folder }
-        let uniqueFolders = Set(allFolders)
-        return Array(uniqueFolders).sorted()
+        var result = ["Все чаты"]
+        let names = Set(rooms.map { $0.folder })
+        result.append(contentsOf: names.sorted())
+        return result
     }
     
     private var filteredRooms: [RoomInfo] {
-        if selectedFolder == "Все чаты" {
-            return rooms
-        }
+        if selectedFolder == "Все чаты" { return rooms }
         return rooms.filter { $0.folder == selectedFolder }
     }
     
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(filteredRooms) { room in
-                    NavigationLink {
-                        ChatRoomView(roomName: room.name)
-                    } label: {
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
-                            withAnimation {
-                                rooms.removeAll { $0.id == room.id }
+            VStack(spacing: 0) {
+                // Folder picker
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(folders, id: \.self) { folder in
+                            Button {
+                                selectedFolder = folder
+                            } label: {
+                                Text(folder)
+                                    .font(.subheadline)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 6)
+                                    .background(selectedFolder == folder ? accentColor : Color(.systemGray5))
+                                    .foregroundColor(selectedFolder == folder ? .white : .secondary)
+                                    .cornerRadius(16)
                             }
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                }
+                
+                // Chat list
+                List {
+                    ForEach(filteredRooms) { room in
+                        NavigationLink {
+                            ChatRoomView(roomName: room.name)
                         } label: {
-                            Label("Удалить", systemImage: "trash")
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    Circle()
+                                        .fill(accentColor.opacity(0.15))
+                                        .frame(width: 44, height: 44)
+                                    Text(String(room.name.prefix(1)).uppercased())
+                                        .font(.headline)
+                                        .foregroundColor(accentColor)
+                                }
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(room.name)
+                                        .font(.body)
+                                        .foregroundColor(.primary)
+                                    Text(room.lastMessage)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(1)
+                                }
+                                Spacer()
+                                Text(room.time)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                rooms.removeAll { $0.id == room.id }
+                            } label: {
+                                Label("Удалить", systemImage: "trash")
+                            }
                         }
                     }
                 }
-            }
-            .listStyle(.plain)
-            .refreshable {
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                .listStyle(.plain)
+                .refreshable {
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                }
             }
             .navigationTitle("Чаты")
-            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showingCreateRoom = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.title3)
-                            .foregroundColor(accentColor)
+                    Button { showingCreateRoom = true } label: {
+                        Image(systemName: "plus").font(.title3).foregroundColor(accentColor)
                     }
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        showingNewFolder = true
-                    } label: {
-                        Text("Новая папка")
-                            .font(.subheadline)
-                            .foregroundColor(accentColor)
+                    Button { showingNewFolder = true } label: {
+                        Image(systemName: "folder.badge.plus").foregroundColor(accentColor)
                     }
                 }
             }
-            .sheet(isPresented: $showingCreateRoom) {
-                CreateRoomView()
-            }
+            .sheet(isPresented: $showingCreateRoom) { CreateRoomView() }
             .alert("Новая папка", isPresented: $showingNewFolder) {
-                TextField("Название папки", text: $newFolderName)
-                Button("Отмена", role: .cancel) { newFolderName = "" }
-                Button("Создать") {
-                    if !newFolderName.isEmpty {
-                        newFolderName = ""
-                    }
-                }
-            } message: {
-                Text("Введите название новой папки")
-            }
-            .navigationDestination(for: RoomInfo.self) { room in
-                ChatRoomView(room: room)
+                TextField("Название", text: $newFolderName)
+                Button("Создать") { showingNewFolder = false }
+                Button("Отмена", role: .cancel) { }
             }
         }
         .preferredColorScheme(.dark)
     }
-    
-    private var accentColor: Color {
-        Color(red: 0, green: 0.48, blue: 1.0)
-    }
-}
-
-struct ChatRow: View {
-    let room: RoomInfo
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(Color(red: 0, green: 0.48, blue: 1.0).opacity(0.2))
-                .frame(width: 48, height: 48)
-                .overlay(
-                    Text(room.avatarLetter)
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .foregroundColor(Color(red: 0, green: 0.48, blue: 1.0))
-                )
-            
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(room.name)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Text(room.time)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                Text(room.lastMessage)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-#Preview {
-    ChatListView()
 }
