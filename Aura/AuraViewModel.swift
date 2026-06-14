@@ -145,6 +145,7 @@ class AuraViewModel: ObservableObject {
         if let d = try? JSONEncoder().encode(rooms) { userDefaults.set(d, forKey: roomsKey) }
     }
     
+    func saveAll() { saveRooms(); saveMessages() }
     func saveMessages() {
         if let d = try? JSONEncoder().encode(messages.suffix(500)) { userDefaults.set(d, forKey: "aura_messages") }
     }

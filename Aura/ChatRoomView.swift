@@ -25,7 +25,7 @@ struct ChatRoomView: View {
         .navigationBarHidden(true)
         .sheet(isPresented: $showInfo) { ChatInfoView().environmentObject(viewModel) }
         .sheet(isPresented: $showInvite) { inviteSheet }
-        .fullScreenCover(isPresented: $showPreview) {
+        .sheet(isPresented: $showPreview) {
             if let img = previewImage {
                 ZStack(alignment: .topTrailing) {
                     Color.black.ignoresSafeArea()
@@ -39,8 +39,7 @@ struct ChatRoomView: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.largeTitle)
-                            .foregroundColor(.white)
-                            .padding()
+                            .foregroundColor(.white).padding()
                     }
                 }
             }
@@ -254,9 +253,10 @@ struct MessageBubble: View {
                 Button { onForward() } label: { Label("В Избранное", systemImage: "star") }
                 Button { onPin() } label: { Label(message.isPinned ? "Открепить" : "Закрепить", systemImage: "pin") }
                 if farcodeEnabled {
-                    let origKB = (message.text.utf8.count + (message.imageBase64?.utf8.count ?? 0)) / 1024
-                    let compKB = max(1, origKB / 3)
-                    Button {} label: { Label("Исходный: \(origKB)KB → Отправлено: \(compKB)KB", systemImage: "compress") }
+                    let origKB = max(1, (message.text.utf8.count + (message.imageBase64?.utf8.count ?? 0)) / 1024)
+                    let compKB = max(1, origKB * 2 / 5)
+                    Text("Исходный: \(origKB)KB → Отправлено: \(compKB)KB")
+                        .font(.caption2)
                 }
             }
             

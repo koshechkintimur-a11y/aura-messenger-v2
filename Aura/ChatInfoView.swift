@@ -37,6 +37,7 @@ struct ChatInfoView: View {
                             if let data = try? await item?.loadTransferable(type: Data.self),
                                let idx = vm.rooms.firstIndex(where: { $0.id == vm.currentRoomId }) {
                                 vm.rooms[idx].avatarBase64 = data.base64EncodedString()
+                                vm.saveAll()
                             }
                         }
                     }

@@ -3,7 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var viewModel: AuraViewModel
     @State private var showResetConfirm = false
-    @State private var farcodeEnabled = false
+    @AppStorage("farcodeEnabled") private var farcodeEnabled = false
     
     var body: some View {
         NavigationStack {
