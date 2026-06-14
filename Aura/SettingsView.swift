@@ -27,7 +27,7 @@ struct SettingsView: View {
                 Section("Хранилище") {
                     row(icon: "text.bubble", color: .blue, title: "Чаты", detail: "\(viewModel.totalChats)")
                     row(icon: "message", color: .green, title: "Сообщений", detail: "\(viewModel.totalMessages)")
-                    row(icon: "photo", color: .purple, title: "Медиа", detail: viewModel.storageUsed)
+                    row(icon: "photo", color: .purple, title: "Медиа", detail: "\(viewModel.storageUsed / 1024) KB")
                     row(icon: "shield", color: .orange, title: "Куки", detail: "")
                     Button { viewModel.clearCache() } label: {
                         row(icon: "trash", color: .red, title: "Очистить кеш", detail: "")
