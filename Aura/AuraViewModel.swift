@@ -167,6 +167,8 @@ class AuraViewModel: ObservableObject {
             userDefaults.set(data, forKey: foldersKey)
         }
     }
+    
+    func saveFolders() { persistFolders() }
 
     func addFolder(_ name: String) {
         guard !name.isEmpty, !folders.contains(name) else { return }

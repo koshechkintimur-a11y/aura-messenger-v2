@@ -6,244 +6,127 @@ struct ChatListView: View {
     @State private var showingCreateRoom = false
     @State private var showingNewFolder = false
     @State private var newFolderName = ""
-    @State private var showDeleteConfirmation: ChatRoom? = nil
-    @State private var folders: [String] = ["Избранное"]
+    @State private var roomToDelete: ChatRoom?
+    @State private var showDeleteConfirm = false
     
-    private let accent = Color(red: 0, green: 0.48, blue: 1.0)
-    private let bgColor = Color(0x0A0A0F)
-    private let cardColor = Color(0x1C1C24)
+    let accentColor = Color(red: 0, green: 0.48, blue: 1.0)
     
-    private var filteredRooms: [ChatRoom] {
-        if selectedFolder == "Избранное" {
-            return viewModel.rooms
-        }
-        return viewModel.rooms
+    var folders: [String] {
+        ["Избранное"] + viewModel.folders
+    }
+    
+    var filteredRooms: [ChatRoom] {
+        if selectedFolder == "Избранное" { return viewModel.rooms }
+        return viewModel.rooms.filter { $0.name == selectedFolder }
     }
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                bgColor.ignoresSafeArea()
-                
-                if viewModel.rooms.isEmpty {
-                    emptyStateView
-                } else {
-                    roomContent
-                }
+            VStack(spacing: 0) {
+                folderBar
+                roomContent
             }
             .navigationTitle("Чаты")
-            .toolbar { toolbarContent }
-            .sheet(isPresented: $showingCreateRoom) { CreateRoomView() }
-            .alert("Новая папка", isPresented: $showingNewFolder) {
-                TextField("Название папки", text: $newFolderName)
-                Button("Создать") {
-                    if !newFolderName.trimmingCharacters(in: .whitespaces).isEmpty {
-                        folders.append(newFolderName.trimmingCharacters(in: .whitespaces))
-                        newFolderName = ""
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button { showingNewFolder = true } label: {
+                        Image(systemName: "folder.badge.plus").foregroundColor(accentColor)
                     }
                 }
-                Button("Отмена", role: .cancel) {
-                    newFolderName = ""
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { showingCreateRoom = true } label: {
+                        Image(systemName: "plus").font(.title3).foregroundColor(accentColor)
+                    }
                 }
             }
-            .alert("Точно удалить?", isPresented: .init(
-                get: { showDeleteConfirmation != nil },
-                set: { if !$0 { showDeleteConfirmation = nil } }
-            )) {
-                Button("Отмена", role: .cancel) {
-                    showDeleteConfirmation = nil
+            .sheet(isPresented: $showingCreateRoom) {
+                CreateRoomView().environmentObject(viewModel)
+            }
+            .alert("Новая папка", isPresented: $showingNewFolder) {
+                TextField("Название", text: $newFolderName)
+                Button("Создать") {
+                    let name = newFolderName.trimmingCharacters(in: .whitespaces)
+                    if !name.isEmpty { viewModel.folders.append(name); viewModel.saveFolders() }
+                    newFolderName = ""
                 }
+                Button("Отмена", role: .cancel) {}
+            }
+            .confirmationDialog("Удалить чат?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
                 Button("Удалить", role: .destructive) {
-                    if let room = showDeleteConfirmation {
-                        deleteRoom(room)
-                    }
+                    if let room = roomToDelete { viewModel.deleteRoom(roomId: room.id) }
                 }
+                Button("Отмена", role: .cancel) {}
             } message: {
-                if let room = showDeleteConfirmation {
-                    Text("Чат '\(room.name)' будет удалён безвозвратно.")
-                        .font(.system(size: 14))
-                }
+                Text("Чат будет удалён безвозвратно")
             }
         }
         .preferredColorScheme(.dark)
-        .onAppear {
-            // Ensure folders always has "Избранное"
-            if !folders.contains("Избранное") {
-                folders.insert("Избранное", at: 0)
-            }
-        }
     }
     
-    // MARK: - Empty State
-    
-    private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            
-            Image(systemName: "message.badge.plus")
-                .font(.system(size: 64, weight: .light))
-                .foregroundColor(accent.opacity(0.4))
-            
-            Text("Нет чатов")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.white)
-            
-            Text("Создайте новый")
-                .font(.system(size: 15))
-                .foregroundColor(Color(0x8E8E93))
-            
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-    
-    // MARK: - Room Content
-    
-    private var roomContent: some View {
-        VStack(spacing: 0) {
-            folderBar
-            chatList
-        }
-    }
-    
-    // MARK: - Folder Bar
-    
-    private var folderBar: some View {
+    var folderBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(folders, id: \\.self) { folder in
-                    Button { selectedFolder = folder } label: {
-                        HStack(spacing: 6) {
-                            if folder == "Избранное" {
-                                Image(systemName: "star.fill")
-                                    .font(.system(size: 12))
+                ForEach(folders, id: \.self) { f in
+                    Button { selectedFolder = f } label: {
+                        Text(f).font(.subheadline)
+                            .padding(.horizontal, 14).padding(.vertical, 6)
+                            .background(f == selectedFolder ? accentColor : Color(.systemGray5))
+                            .foregroundColor(f == selectedFolder ? .white : .secondary)
+                            .cornerRadius(16)
+                    }
+                }
+            }
+            .padding(.horizontal).padding(.vertical, 8)
+        }
+    }
+    
+    var roomContent: some View {
+        Group {
+            if filteredRooms.isEmpty && selectedFolder != "Избранное" {
+                VStack(spacing: 12) {
+                    Spacer()
+                    Image(systemName: "tray").font(.system(size: 40)).foregroundColor(.secondary)
+                    Text("Нет чатов").font(.title3).foregroundColor(.secondary)
+                    Text("Создайте новый чат").font(.subheadline).foregroundColor(.secondary)
+                    Spacer()
+                }
+            } else if viewModel.rooms.isEmpty {
+                VStack(spacing: 12) {
+                    Spacer()
+                    Image(systemName: "message.badge.waveform.fill").font(.system(size: 50)).foregroundColor(accentColor.opacity(0.5))
+                    Text("Нет чатов").font(.title3).foregroundColor(.secondary)
+                    Text("Нажмите + чтобы создать").font(.subheadline).foregroundColor(.secondary)
+                    Spacer()
+                }
+            } else {
+                List {
+                    ForEach(filteredRooms) { room in
+                        NavigationLink {
+                            ChatRoomView()
+                                .environmentObject(viewModel)
+                                .onAppear { viewModel.currentRoomId = room.id }
+                        } label: {
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    Circle().fill(accentColor.opacity(0.15)).frame(width: 44, height: 44)
+                                    Text(String(room.name.prefix(1)).uppercased()).font(.headline).foregroundColor(accentColor)
+                                }
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(room.name).font(.body).foregroundColor(.primary)
+                                    Text("\(room.members.count) участников").font(.caption).foregroundColor(.secondary)
+                                }
+                                Spacer()
                             }
-                            Text(folder)
-                                .font(.system(size: 14, weight: folder == selectedFolder ? .semibold : .medium))
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 20)
-                                .fill(folder == selectedFolder ? accent : cardColor)
-                        )
-                        .foregroundColor(folder == selectedFolder ? .white : Color(0x8E8E93))
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                roomToDelete = room; showDeleteConfirm = true
+                            } label: { Label("Удалить", systemImage: "trash") }
+                        }
                     }
                 }
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-        }
-    }
-    
-    // MARK: - Chat List
-    
-    private var chatList: some View {
-        List(filteredRooms) { room in
-            roomRow(room)
-                .swipeActions(edge: .trailing) {
-                    Button(role: .destructive) {
-                        showDeleteConfirmation = room
-                    } label: {
-                        Label("Удалить", systemImage: "trash")
-                    }
-                }
-                .listRowBackground(bgColor)
-                .listRowSeparator(.hidden)
-        }
-        .listStyle(.plain)
-        .background(bgColor)
-    }
-    
-    // MARK: - Room Row
-    
-    private func roomRow(_ room: ChatRoom) -> some View {
-        NavigationLink {
-            ChatRoomView()
-                .environmentObject(viewModel)
-        } label: {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(accent.opacity(0.15))
-                        .frame(width: 48, height: 48)
-                    
-                    Text(room.name.prefix(1).uppercased())
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(accent)
-                }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(room.name)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.white)
-                    
-                    Text("\(room.members.count) участников")
-                        .font(.system(size: 14))
-                        .foregroundColor(Color(0x8E8E93))
-                        .lineLimit(1)
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color(0x5C5C66))
-            }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 4)
-        }
-    }
-    
-    // MARK: - Toolbar
-    
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .navigationBarLeading) {
-            Button(action: { showingNewFolder = true }) {
-                HStack(spacing: 4) {
-                    Image(systemName: "folder.badge.plus")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(accent)
-                }
+                .listStyle(.plain)
             }
         }
-        
-        ToolbarItem(placement: .navigationBarTrailing) {
-            Button(action: { showingCreateRoom = true }) {
-                Image(systemName: "plus")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(accent)
-            }
-        }
-    }
-    
-    // MARK: - Actions
-    
-    private func deleteRoom(_ room: ChatRoom) {
-        if let index = viewModel.rooms.firstIndex(where: { $0.id == room.id }) {
-            viewModel.rooms.remove(at: index)
-            viewModel.persistenceGuard()
-        }
-    }
-}
-
-// MARK: - Color Extension
-
-extension Color {
-    init(_ hex: Int) {
-        self.init(
-            red: Double((hex >> 16) & 0xFF) / 255,
-            green: Double((hex >> 8) & 0xFF) / 255,
-            blue: Double(hex & 0xFF) / 255
-        )
-    }
-}
-
-// MARK: - Persistence Extension (for ChatListView)
-
-extension AuraViewModel {
-    func persistenceGuard() {
-        persistRooms()
     }
 }
