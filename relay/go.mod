@@ -2,6 +2,10 @@ module aura-v2/relay
 
 go 1.26.1
 
+tool (
+	golang.org/x/mobile/cmd/gobind
+)
+
 require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
