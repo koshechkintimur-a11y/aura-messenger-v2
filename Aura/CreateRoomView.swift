@@ -18,8 +18,8 @@ struct CreateRoomView: View {
     @State private var showCopied: Bool = false
     @State private var showInviteSheet: Bool = false
 
-    private let accent = Color(hex: "#5A9FEE")
-    private let background = Color(hex: "#0A0A0F")
+    private let accent = Color(.systemGray6)
+    private let background = Color(.systemGray6)
 
     var body: some View {
         NavigationStack {

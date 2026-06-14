@@ -10,8 +10,8 @@ struct JoinRoomView: View {
         Invitation(id: "3", roomName: "Общий проект", sender: "Мария С.", avatar: "M")
     ]
 
-    private let accent = Color(hex: "#5A9FEE")
-    private let background = Color(hex: "#0A0A0F")
+    private let accent = Color(.systemGray6)
+    private let background = Color(.systemGray6)
 
     var body: some View {
         NavigationStack {
@@ -152,7 +152,7 @@ struct InvitationRow: View {
     let onAccept: () -> Void
     let onReject: () -> Void
 
-    private let accent = Color(hex: "#5A9FEE")
+    private let accent = Color(.systemGray6)
 
     var body: some View {
         HStack(spacing: 12) {
