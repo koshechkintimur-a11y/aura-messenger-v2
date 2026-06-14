@@ -1,207 +1,237 @@
 import SwiftUI
+import PhotosUI
 
 struct CreateRoomView: View {
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var roomName: String = ""
-    @State private var tag: String = ""
-    @State private var createdRoomId: String? = nil
-    @State private var inviteLink: String = ""
-    @State private var showingShareSheet = false
-    
-    private var isValidRoomName: Bool {
-        !roomName.trimmingCharacters(in: .whitespaces).isEmpty
-    }
-    
-    private var generatedLink: String {
-        if inviteLink.isEmpty {
-            return "https://aura.app/j/\(createdRoomId ?? "xxx")"
-        }
-        return inviteLink
-    }
-    
+    @State private var avatarItem: PhotosPickerItem?
+    @State private var avatarImage: Image?
+    @State private var isPublic: Bool = false
+    @State private var roomURL: String = ""
+
+    @State private var isCreated: Bool = false
+    @State private var generatedLink: String = ""
+    @State private var tagInput: String = ""
+    @State private var showCopied: Bool = false
+
+    private let accent = Color(hex: "#5A9FEE")
+    private let background = Color(hex: "#0A0A0F")
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    if createdRoomId == nil {
-                        createRoomSection
-                    } else {
-                        roomCreatedSection
+            ZStack {
+                background.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 24) {
+                        if !isCreated {
+                            createForm
+                        } else {
+                            createdView
+                        }
                     }
-                }
-                .padding()
-            }
-            .navigationTitle("Создать чат")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Закрыть") {
-                        dismiss()
-                    }
-                    .foregroundColor(Color(red: 0, green: 0.48, blue: 1.0))
-                }
-            }
-        }
-        .preferredColorScheme(.dark)
-    }
-    
-    private var createRoomSection: some View {
-        VStack(spacing: 20) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Название чата")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                TextField("Введите название", text: $roomName)
                     .padding()
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(12)
-                    .foregroundColor(.primary)
+                }
             }
-            
-            Button {
-                createRoom()
-            } label: {
-                Text("Создать")
-                    .font(.headline)
+            .navigationTitle("Создать чат", displayMode: .inline)
+            .toolbarBackground(background, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+        }
+    }
+
+    // MARK: - Форма создания
+
+    private var createForm: some View {
+        VStack(spacing: 20) {
+            PhotosPicker(selection: $avatarItem, matching: .images) {
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.06))
+                        .frame(width: 60, height: 60)
+                    if let avatarImage {
+                        avatarImage
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 60, height: 60)
+                            .clipShape(Circle())
+                    } else {
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 22))
+                            .foregroundColor(accent)
+                    }
+                }
+            }
+            .onChange(of: avatarItem) { _, newItem in
+                Task {
+                    if let data = try? await newItem?.loadTransferable(type: Data.self),
+                       let uiImage = UIImage(data: data) {
+                        avatarImage = Image(uiImage: uiImage)
+                    }
+                }
+            }
+
+            CustomTextField(title: "Название чата", text: $roomName)
+
+            Toggle("Публичный чат", isOn: $isPublic)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(.white)
+                .tint(accent)
+
+            if isPublic {
+                CustomTextField(title: "URL (латиница, цифры, '-')", text: $roomURL)
+            }
+
+            Button(action: createRoom) {
+                Text("Создать чат")
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(isValidRoomName ? Color(red: 0, green: 0.48, blue: 1.0) : Color.gray)
+                    .background(accent)
                     .cornerRadius(12)
             }
-            .disabled(!isValidRoomName)
         }
     }
-    
-    private var roomCreatedSection: some View {
+
+    private func createRoom() {
+        guard !roomName.isEmpty else { return }
+        generatedLink = "https://aura.chat/j/\(roomURL.isEmpty ? UUID().uuidString.prefix(8).lowercased() : roomURL)"
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isCreated = true
+        }
+    }
+
+    // MARK: - После создания
+
+    private var createdView: some View {
         VStack(spacing: 24) {
+            // QR
             VStack(spacing: 8) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 64))
-                    .foregroundColor(Color(red: 0, green: 0.48, blue: 1.0))
-                
-                Text("Чат создан!")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                
-                Text(roomName)
-                    .font(.headline)
-                    .foregroundColor(.secondary)
+                Text("QR-код приглашения")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.gray)
+                QRView(data: generatedLink)
+                    .frame(width: 180, height: 180)
             }
-            
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Ссылка-приглашение")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
+
+            // Ссылка
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Ссылка приглашения")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.gray)
                 HStack(spacing: 12) {
                     Text(generatedLink)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 13))
+                        .foregroundColor(.white)
                         .lineLimit(1)
-                    
                     Spacer()
-                    
-                    Button {
+                    Button(action: {
                         UIPasteboard.general.string = generatedLink
-                    } label: {
+                        showCopied = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showCopied = false }
+                    }) {
                         Image(systemName: "doc.on.doc")
-                            .foregroundColor(Color(red: 0, green: 0.48, blue: 1.0))
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(accent)
                     }
                 }
                 .padding()
-                .background(Color.gray.opacity(0.2))
-                .cornerRadius(12)
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(10)
             }
-            
-            Button {
-                showingShareSheet = true
-            } label: {
-                HStack {
-                    Image(systemName: "square.and.arrow.up")
-                    Text("Поделиться")
-                }
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color(red: 0, green: 0.48, blue: 1.0))
-                .cornerRadius(12)
+
+            if showCopied {
+                Text("Скопировано!")
+                    .font(.system(size: 13))
+                    .foregroundColor(.green)
+                    .transition(.opacity)
             }
-            .sheet(isPresented: $showingShareSheet) {
-                ShareSheet(activityItems: [generatedLink])
-            }
-            
-            Divider()
-                .background(Color.gray.opacity(0.3))
-            
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Пригласить по @тегу")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
+
+            // Тег + отправить
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Отправить по тегу")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.gray)
                 HStack(spacing: 12) {
-                    TextField("@username", text: $tag)
-                        .padding()
-                        .background(Color.gray.opacity(0.2))
-                        .cornerRadius(12)
-                        .foregroundColor(.primary)
-                    
-                    Button {
-                        sendInviteByTag()
-                    } label: {
+                    Text("@")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.gray)
+                    TextField("", text: $tagInput)
+                        .textFieldStyle(.plain)
+                        .foregroundColor(.white)
+                    Button(action: {}) {
                         Text("Отправить")
-                            .font(.subheadline)
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.white)
-                            .padding(.horizontal)
-                            .padding(.vertical, 12)
-                            .background(Color(red: 0, green: 0.48, blue: 1.0))
-                            .cornerRadius(12)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(accent)
+                            .cornerRadius(8)
                     }
                 }
+                .padding()
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(10)
             }
-            
-            Button {
-                dismiss()
-            } label: {
-                Text("Войти в чат")
-                    .font(.headline)
-                    .foregroundColor(Color(red: 0, green: 0.48, blue: 1.0))
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color(red: 0, green: 0.48, blue: 1.0), lineWidth: 2)
-                    )
-            }
+
+            Spacer(minLength: 40)
         }
     }
-    
-    private func createRoom() {
-        let newId = UUID().uuidString.prefix(8).uppercased()
-        createdRoomId = String(newId)
-        inviteLink = "https://aura.app/j/\(createdRoomId ?? "xxx")"
-    }
-    
-    private func sendInviteByTag() {
-        guard !tag.isEmpty else { return }
-        tag = ""
+}
+
+// MARK: - Вспомогательные компоненты
+
+struct CustomTextField: View {
+    let title: String
+    @Binding var text: String
+
+    private let accent = Color(hex: "#5A9FEE")
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.gray)
+            TextField("", text: $text)
+                .textFieldStyle(.plain)
+                .foregroundColor(.white)
+                .padding()
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                )
+        }
     }
 }
 
-struct ShareSheet: UIViewControllerRepresentable {
-    let activityItems: [Any]
-    
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+struct QRView: View {
+    let data: String
+    var body: some View {
+        RoundedRectangle(cornerRadius: 12)
+            .fill(Color.white)
+            .overlay(
+                Image(systemName: "qrcode")
+                    .font(.system(size: 80))
+                    .foregroundColor(.black)
+            )
     }
-    
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
-#Preview {
-    CreateRoomView()
+extension Color {
+    init(hex: String) {
+        let hexSanitized = hex.trimmingCharacters(in: .whitesAndNewlines)
+        let clean = hexSanitized.hasPrefix("#") ? String(hexSanitized.dropFirst()) : hexSanitized
+        var rgb: UInt64 = 0
+        Scanner(string: clean).scanHexInt64(&rgb)
+        self.init(
+            .sRGB,
+            red: Double((rgb >> 16) & 0xFF) / 255.0,
+            green: Double((rgb >> 8) & 0xFF) / 255.0,
+            blue: Double(rgb & 0xFF) / 255.0,
+            opacity: 1.0
+        )
+    }
 }

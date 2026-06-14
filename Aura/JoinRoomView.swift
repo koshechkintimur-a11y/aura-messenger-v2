@@ -2,205 +2,209 @@ import SwiftUI
 
 struct JoinRoomView: View {
     @Environment(\.dismiss) private var dismiss
-    
-    @State private var inviteLink: String = ""
-    @State private var isJoining = false
-    @State private var showError = false
-    @State private var errorMessage = ""
-    @State private var pendingInvites: [PendingInvite] = [
-        PendingInvite(id: "1", fromUser: "@alex", roomName: "Разработка"),
-        PendingInvite(id: "2", fromUser: "@maria", roomName: "Дизайн-команда"),
+
+    @State private var joinLink: String = ""
+    @State private var invitations: [Invitation] = [
+        Invitation(id: "1", roomName: "Дизайн-команда", sender: "Анна М.", avatar: "A"),
+        Invitation(id: "2", roomName: "iOS Dev Chat", sender: "Игорь К.", avatar: "I"),
+        Invitation(id: "3", roomName: "Общий проект", sender: "Мария С.", avatar: "M")
     ]
-    
-    private var isValidLink: Bool {
-        !inviteLink.trimmingCharacters(in: .whitespaces).isEmpty
-    }
-    
+
+    private let accent = Color(hex: "#5A9FEE")
+    private let background = Color(hex: "#0A0A0F")
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 32) {
-                    joinLinkSection
-                    
-                    scanQRSection
-                    
-                    pendingInvitesSection
-                }
-                .padding()
-            }
-            .navigationTitle("Вступить в чат")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Закрыть") {
-                        dismiss()
+            ZStack {
+                background.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 24) {
+                        joinSection
+                        scanSection
+                        invitationsSection
                     }
-                    .foregroundColor(Color(red: 0, green: 0.48, blue: 1.0))
-                }
-            }
-        }
-        .preferredColorScheme(.dark)
-    }
-    
-    private var joinLinkSection: some View {
-        VStack(spacing: 20) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Ссылка или /j/...")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                TextField("Введите ссылку-приглашение", text: $inviteLink)
                     .padding()
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(12)
-                    .foregroundColor(.primary)
-            }
-            
-            Button {
-                joinRoom()
-            } label: {
-                HStack {
-                    if isJoining {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    } else {
-                        Text("Войти")
-                            .font(.headline)
-                    }
                 }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(isValidLink ? Color(red: 0, green: 0.48, blue: 1.0) : Color.gray)
-                .cornerRadius(12)
             }
-            .disabled(!isValidLink || isJoining)
+            .navigationTitle("Вступить в чат", displayMode: .inline)
+            .toolbarBackground(background, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
     }
-    
-    private var scanQRSection: some View {
-        Button {
-            scanQRCode()
-        } label: {
-            HStack {
-                Image(systemName: "qrcode.viewfinder")
-                    .font(.title2)
-                Text("Сканировать QR")
-                    .font(.headline)
+
+    // MARK: - Вступить по ссылке
+
+    private var joinSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Ссылка на чат")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.gray)
+            HStack(spacing: 12) {
+                TextField("/j/...", text: $joinLink)
+                    .textFieldStyle(.plain)
+                    .foregroundColor(.white)
+                Button(action: joinByLink) {
+                    Text("Войти")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .background(accent)
+                        .cornerRadius(10)
+                }
             }
-            .foregroundColor(Color(red: 0, green: 0.48, blue: 1.0))
-            .frame(maxWidth: .infinity)
             .padding()
+            .background(Color.white.opacity(0.05))
+            .cornerRadius(10)
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color(red: 0, green: 0.48, blue: 1.0), lineWidth: 2)
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
             )
         }
     }
-    
-    private var pendingInvitesSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Приглашения по @тегу")
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
-            
-            if pendingInvites.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "envelope.open")
-                        .font(.system(size: 48))
-                        .foregroundColor(.secondary)
-                    
-                    Text("Нет ожидающих приглашений")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 32)
-            } else {
-                ForEach(pendingInvites) { invite in
-                    PendingInviteRow(invite: invite) {
-                        acceptInvite(invite)
-                    }
-                }
-            }
-        }
-    }
-    
-    private func joinRoom() {
-        guard !inviteLink.isEmpty else { return }
-        
-        isJoining = true
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            isJoining = false
-            dismiss()
-        }
-    }
-    
-    private func scanQRCode() {
-        // Здесь будет логика сканирования QR-кода
-    }
-    
-    private func acceptInvite(_ invite: PendingInvite) {
-        withAnimation {
-            pendingInvites.removeAll { $0.id == invite.id }
-        }
-        dismiss()
-    }
-}
 
-struct PendingInvite: Identifiable {
-    let id: String
-    let fromUser: String
-    let roomName: String
-}
+    private func joinByLink() {
+        // Обработка ссылки
+    }
 
-struct PendingInviteRow: View {
-    let invite: PendingInvite
-    let onAccept: () -> Void
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            Circle()
-                .fill(Color(red: 0, green: 0.48, blue: 1.0).opacity(0.2))
-                .frame(width: 44, height: 44)
-                .overlay(
-                    Text(String(invite.fromUser.dropFirst().prefix(1).uppercased()))
-                        .font(.headline)
-                        .foregroundColor(Color(red: 0, green: 0.48, blue: 1.0))
-                )
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(invite.roomName)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                Text("от \(invite.fromUser)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            Button {
-                onAccept()
-            } label: {
-                Text("Принять")
-                    .font(.subheadline)
+    // MARK: - Сканировать QR
+
+    private var scanSection: some View {
+        Button(action: {
+            // Открыть сканер QR
+        }) {
+            HStack(spacing: 10) {
+                Image(systemName: "qrcode.viewfinder")
+                    .font(.system(size: 22))
                     .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color(red: 0, green: 0.48, blue: 1.0))
-                    .cornerRadius(8)
+                Text("Сканировать QR")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.gray)
+            }
+            .padding()
+            .background(Color.white.opacity(0.05))
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            )
+        }
+    }
+
+    // MARK: - Приглашения
+
+    private var invitationsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Приглашения")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.white)
+                .padding(.top, 8)
+
+            if invitations.isEmpty {
+                Text("Новых приглашений нет")
+                    .font(.system(size: 14))
+                    .foregroundColor(.gray)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 20)
+            } else {
+                ForEach(invitations) { invitation in
+                    InvitationRow(
+                        invitation: invitation,
+                        onAccept: { acceptInvitation(invitation) },
+                        onReject: { rejectInvitation(invitation) }
+                    )
+                }
+            }
+        }
+    }
+
+    private func acceptInvitation(_ invitation: Invitation) {
+        withAnimation(.easeInOut(duration: 0.25)) {
+            invitations.removeAll { $0.id == invitation.id }
+        }
+    }
+
+    private func rejectInvitation(_ invitation: Invitation) {
+        withAnimation(.easeInOut(duration: 0.25)) {
+            invitations.removeAll { $0.id == invitation.id }
+        }
+    }
+}
+
+// MARK: - Модели
+
+struct Invitation: Identifiable {
+    let id: String
+    let roomName: String
+    let sender: String
+    let avatar: String
+}
+
+// MARK: - InvitationRow
+
+struct InvitationRow: View {
+    let invitation: Invitation
+    let onAccept: () -> Void
+    let onReject: () -> Void
+
+    private let accent = Color(hex: "#5A9FEE")
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Аватар
+            ZStack {
+                Circle()
+                    .fill(accent.opacity(0.2))
+                    .frame(width: 40, height: 40)
+                Text(invitation.avatar)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(accent)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(invitation.roomName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+                Text("От: \(invitation.sender)")
+                    .font(.system(size: 13))
+                    .foregroundColor(.gray)
+            }
+
+            Spacer()
+
+            HStack(spacing: 8) {
+                Button(action: onAccept) {
+                    Text("Принять")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(accent)
+                        .cornerRadius(8)
+                }
+
+                Button(action: onReject) {
+                    Text("Отклонить")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.red.opacity(0.7))
+                        .cornerRadius(8)
+                }
             }
         }
         .padding()
-        .background(Color.gray.opacity(0.15))
-        .cornerRadius(12)
+        .background(Color.white.opacity(0.04))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+        )
     }
-}
-
-#Preview {
-    JoinRoomView()
 }
