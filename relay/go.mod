@@ -2,9 +2,7 @@ module aura-v2/relay
 
 go 1.26.1
 
-tool (
-	golang.org/x/mobile/cmd/gobind
-)
+tool golang.org/x/mobile/cmd/gobind
 
 require (
 	github.com/google/uuid v1.6.0
@@ -30,7 +28,11 @@ require (
 	github.com/pion/stun/v3 v3.1.1 // indirect
 	github.com/pion/turn/v4 v4.1.4 // indirect
 	github.com/wlynxg/anet v0.0.5 // indirect
+	golang.org/x/mobile v0.0.0-20260611195102-4dd8f1dbf5d2 // indirect
+	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
+	golang.org/x/tools v0.46.0 // indirect
 )
