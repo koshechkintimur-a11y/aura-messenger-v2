@@ -39,7 +39,7 @@ jobs:
       # ── Generate Xcode project ──
       - name: Generate Xcode project
         run: |
-          xcodegen generate --spec project.yml --project Aura.xcodeproj
+          xcodegen generate --spec project.yml --project Aura
           ls -la Aura.xcodeproj/
 
       # ── Build Swift → unsigned IPA ──
