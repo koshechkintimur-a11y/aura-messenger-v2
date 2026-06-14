@@ -95,7 +95,6 @@ class AuraViewModel: ObservableObject {
     init() {
         loadProfile()
         loadRooms()
-        loadMessages()
     }
 
     // MARK: Profile
