@@ -5,7 +5,8 @@ struct ContentView: View {
     
     var body: some View {
         TabView {
-            ChatRoomView(viewModel: viewModel)
+            ChatRoomView()
+                .environmentObject(viewModel)
                 .tabItem {
                     Label("Чаты", systemImage: "message.fill")
                 }

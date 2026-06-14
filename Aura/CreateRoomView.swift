@@ -34,7 +34,8 @@ struct CreateRoomView: View {
                     .padding()
                 }
             }
-            .navigationTitle("Создать чат", displayMode: .inline)
+            .navigationTitle("Создать чат")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(background, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
         }
@@ -222,7 +223,7 @@ struct QRView: View {
 
 extension Color {
     init(hex: String) {
-        let hexSanitized = hex.trimmingCharacters(in: .whitesAndNewlines)
+        let hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
         let clean = hexSanitized.hasPrefix("#") ? String(hexSanitized.dropFirst()) : hexSanitized
         var rgb: UInt64 = 0
         Scanner(string: clean).scanHexInt64(&rgb)

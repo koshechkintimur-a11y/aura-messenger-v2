@@ -30,7 +30,7 @@ struct ChatRoomView: View {
             // Input area
             inputArea
         }
-        .background(Color(0x0A0A0F))
+        .background(Color(hex: "0A0A0F"))
         .navigationBarBackButtonHidden(true)
         .navigationBarHidden(true)
         .actionSheet(isPresented: $showActionSheet) {
@@ -59,18 +59,18 @@ struct ChatRoomView: View {
             Button(action: { /* pop */ }) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(Color(0x5A9FEE))
+                    .foregroundColor(Color(hex: "5A9FEE"))
             }
 
             // Avatar
             ZStack {
                 Circle()
-                    .fill(Color(0x1C1C24))
+                    .fill(Color(hex: "1C1C24"))
                     .frame(width: 40, height: 40)
 
                 Text(room?.name.prefix(1).uppercased() ?? "?")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color(0x8E8E93))
+                    .foregroundColor(Color(hex: "8E8E93"))
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -83,13 +83,13 @@ struct ChatRoomView: View {
                     let memberCount = room?.members.count ?? 0
                     Text("\(memberCount) \(memberCount == 1 ? "участник" : "участников")")
                         .font(.system(size: 13))
-                        .foregroundColor(Color(0x8E8E93))
+                        .foregroundColor(Color(hex: "8E8E93"))
 
                     // Online status
                     if let firstMember = room?.members.first,
                        viewModel.isUserOnline(tag: firstMember) {
                         Circle()
-                            .fill(Color(0x34C759))
+                            .fill(Color(hex: "34C759"))
                             .frame(width: 6, height: 6)
                     } else {
                         Circle()
@@ -103,7 +103,7 @@ struct ChatRoomView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(Color(0x0A0A0F).opacity(0.95))
+        .background((Color(hex: "0A0A0F") as Color).opacity(0.95))
         .overlay(
             Rectangle()
                 .frame(height: 0.5)
@@ -157,12 +157,12 @@ struct ChatRoomView: View {
                 // Sender avatar
                 ZStack {
                     Circle()
-                        .fill(Color(0x1C1C24))
+                        .fill(Color(hex: "1C1C24"))
                         .frame(width: 28, height: 28)
 
                     Text(message.senderName.prefix(1).uppercased())
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(0x8E8E93))
+                        .foregroundColor(Color(hex: "8E8E93"))
                 }
             } else {
                 Spacer(minLength: 36)
@@ -172,7 +172,7 @@ struct ChatRoomView: View {
                 if !isOutgoing {
                     Text(message.senderName)
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(0x8E8E93))
+                        .foregroundColor(Color(hex: "8E8E93"))
                         .padding(.horizontal, 4)
                 }
 
@@ -187,11 +187,11 @@ struct ChatRoomView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(repliedMessage.senderName)
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(Color(0x5A9FEE))
+                                .foregroundColor(Color(hex: "5A9FEE"))
 
                             Text(repliedMessage.text)
                                 .font(.system(size: 12))
-                                .foregroundColor(Color(0x8E8E93))
+                                .foregroundColor(Color(hex: "8E8E93"))
                                 .lineLimit(2)
                         }
                     }
@@ -241,7 +241,7 @@ struct ChatRoomView: View {
                 if message.forwardedFromTag != nil {
                     Text("Переслано")
                         .font(.system(size: 11))
-                        .foregroundColor(Color(0x8E8E93))
+                        .foregroundColor(Color(hex: "8E8E93"))
                         .padding(.horizontal, 4)
                 }
             }
@@ -257,7 +257,7 @@ struct ChatRoomView: View {
         let attributed = try? AttributedString(
             markdown: text,
             options: AttributedString.MarkdownParsingOptions(
-                interpretatedSyntax: .inlineOnly
+                interpretedSyntax: .inlineOnly
             )
         )
         return Text(attributed ?? AttributedString(text))
@@ -322,11 +322,11 @@ struct ChatRoomView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(replyToMessage?.senderName ?? "")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(Color(0x5A9FEE))
+                    .foregroundColor(Color(hex: "5A9FEE"))
 
                 Text(replyToMessage?.text ?? "")
                     .font(.system(size: 13))
-                    .foregroundColor(Color(0x8E8E93))
+                    .foregroundColor(Color(hex: "8E8E93"))
                     .lineLimit(1)
             }
 
@@ -335,7 +335,7 @@ struct ChatRoomView: View {
             Button(action: { replyToMessage = nil }) {
                 Image(systemName: "xmark")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(Color(0x8E8E93))
+                    .foregroundColor(Color(hex: "8E8E93"))
             }
         }
         .padding(.horizontal, 16)
@@ -360,8 +360,8 @@ struct ChatRoomView: View {
                 // Paperclip
                 Button(action: { /* Attach file */ }) {
                     Image(systemName: "paperclip")
-                        .font(.system(size:.dsl:22, weight: .medium))
-                        .foregroundColor(Color(0x8E8E93))
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundColor(Color(hex: "8E8E93"))
                 }
 
                 // Text field
@@ -376,7 +376,7 @@ struct ChatRoomView: View {
                     .padding(.vertical, 10)
                     .background(
                         RoundedRectangle(cornerRadius: 20)
-                            .fill(Color(0x1C1C24))
+                            .fill(Color(hex: "1C1C24"))
                     )
 
                 // Send button
@@ -391,7 +391,7 @@ struct ChatRoomView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
-        .background(Color(0x0A0A0F))
+        .background(Color(hex: "0A0A0F"))
     }
 
     // MARK: - Actions
@@ -425,7 +425,7 @@ struct ChatRoomView: View {
             })
         }
 
-        buttons.append(.cancel("Отмена"))
+        buttons.append(.cancel(Text("Отмена")))
         return buttons
     }
 
