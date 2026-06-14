@@ -79,6 +79,7 @@ struct ChatRoomView: View {
                     }
                 }
             }
+            }
             Spacer()
             Button { showInvite = true } label: {
                 Image(systemName: "person.badge.plus").font(.title3).foregroundColor(.white)
