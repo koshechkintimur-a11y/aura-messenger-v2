@@ -45,7 +45,7 @@ struct ProfileView: View {
                     .padding(.bottom, 30)
             }
         }
-        .background(Color(0x0A0A0F))
+        .background(Color(.systemGray6))
         .navigationTitle("Профиль")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -70,7 +70,7 @@ struct ProfileView: View {
             VStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(Color(0x1C1C24))
+                        .fill(Color(.systemGray6))
                         .frame(width: 100, height: 100)
 
                     if let avatarImage = avatarImage {
@@ -82,24 +82,24 @@ struct ProfileView: View {
                     } else {
                         Text(viewModel.profile.initials.isEmpty ? "👤" : viewModel.profile.initials)
                             .font(.system(size: 36, weight: .medium))
-                            .foregroundColor(Color(0x8E8E93))
+                            .foregroundColor(Color(.systemGray6))
                     }
 
                     // Edit overlay
                     Circle()
-                        .fill(Color(0x2C2C34))
+                        .fill(Color(.systemGray6))
                         .frame(width: 32, height: 32)
                         .overlay(
                             Image(systemName: "camera.fill")
                                 .font(.system(size: 14))
-                                .foregroundColor(Color(0x8E8E93))
+                                .foregroundColor(Color(.systemGray6))
                         )
                         .offset(x: 34, y: 34)
                 }
 
                 Text("Изменить фото")
                     .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(Color(0x5A9FEE))
+                    .foregroundColor(Color(.systemGray6))
             }
         }
         .onChange(of: selectedItem) { newItem in
@@ -130,7 +130,7 @@ struct ProfileView: View {
             )
 
             Divider()
-                .background(Color(0x2C2C34))
+                .background(Color(.systemGray6))
                 .padding(.leading, 52)
 
             // Last name
@@ -142,7 +142,7 @@ struct ProfileView: View {
             )
 
             Divider()
-                .background(Color(0x2C2C34))
+                .background(Color(.systemGray6))
                 .padding(.leading, 52)
 
             // Tag
@@ -150,13 +150,13 @@ struct ProfileView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "at")
                         .font(.system(size: 17))
-                        .foregroundColor(Color(0x8E8E93))
+                        .foregroundColor(Color(.systemGray6))
                         .frame(width: 24)
 
                     TextField("", text: $tag)
                         .placeholder(when: tag.isEmpty) {
                             Text("@тег")
-                                .foregroundColor(Color(0x5C5C66))
+                                .foregroundColor(Color(.systemGray6))
                         }
                         .font(.system(size: 17))
                         .foregroundColor(.white)
@@ -169,14 +169,14 @@ struct ProfileView: View {
                 if let error = tagValidationError, !tag.isEmpty {
                     Text(error)
                         .font(.system(size: 13))
-                        .foregroundColor(Color(0xFF453A))
+                        .foregroundColor(Color(.systemGray6))
                         .padding(.leading, 36)
                         .padding(.bottom, 6)
                 }
             }
 
             Divider()
-                .background(Color(0x2C2C34))
+                .background(Color(.systemGray6))
                 .padding(.leading, 52)
 
             // Email
@@ -190,14 +190,14 @@ struct ProfileView: View {
             if showError && !errorMessage.isEmpty {
                 Text(errorMessage)
                     .font(.system(size: 13))
-                    .foregroundColor(Color(0xFF453A))
+                    .foregroundColor(Color(.systemGray6))
                     .padding(.top, 12)
                     .padding(.leading, 36)
             }
         }
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(0x1C1C24))
+                .fill(Color(.systemGray6))
         )
     }
 
@@ -215,7 +215,7 @@ struct ProfileView: View {
             .padding(.vertical, 16)
             .background(
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(isTagValid ? Color(0x5A9FEE) : Color(0x2C2C34))
+                    .fill(isTagValid ? Color(.systemGray6) : Color(.systemGray6))
             )
         }
         .disabled(!isTagValid)
@@ -228,13 +228,13 @@ struct ProfileView: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 17))
-                .foregroundColor(Color(0x8E8E93))
+                .foregroundColor(Color(.systemGray6))
                 .frame(width: 24)
 
             TextField("", text: text)
                 .placeholder(when: text.wrappedValue.isEmpty) {
                     Text(placeholder)
-                        .foregroundColor(Color(0x5C5C66))
+                        .foregroundColor(Color(.systemGray6))
                 }
                 .font(.system(size: 17))
                 .foregroundColor(.white)
@@ -284,18 +284,3 @@ extension View {
     }
 }
 
-extension Color {
-    init(_ hex: Int) {
-        self.init(
-            red: Double((hex >> 16) & 0xFF) / 255,
-            green: Double((hex >> 8) & 0xFF) / 255,
-            blue: Double(hex & 0xFF) / 255
-        )
-    }
-}
-
-extension Data {
-    init?(base64Encoded: String) {
-        self.init(base64Encoded: base64Encoded)
-    }
-}
