@@ -34,7 +34,7 @@ struct ChatRoomView: View {
             // Input area
             inputArea
         }
-        .background(Color(hex: "#0A0A0F"))
+        .background(Color(.systemGray6))
         .navigationBarBackButtonHidden(true)
         .navigationBarHidden(true)
         .sheet(isPresented: $showInviteSheet) {
@@ -125,7 +125,7 @@ struct ChatRoomView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(Color(hex: "#0A0A0F").opacity(0.95))
+        .background(Color(.systemGray6).opacity(0.95))
         .overlay(
             Rectangle()
                 .frame(height: 0.5)
@@ -168,7 +168,7 @@ struct ChatRoomView: View {
                     }) {
                         Image(systemName: "doc.on.doc")
                             .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(Color(hex: "#5A9FEE"))
+                            .foregroundColor(Color(.systemGray6))
                     }
                 }
                 .padding()
@@ -194,7 +194,7 @@ struct ChatRoomView: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)
-                            .background(Color(hex: "#5A9FEE"))
+                            .background(Color(.systemGray6))
                             .cornerRadius(8)
                     }
                 }
@@ -206,7 +206,7 @@ struct ChatRoomView: View {
             Spacer()
         }
         .padding()
-        .background(Color(hex: "#0A0A0F"))
+        .background(Color(.systemGray6))
     }
 
     private var inviteLink: String {
@@ -332,7 +332,7 @@ struct ChatRoomView: View {
                     .padding(.vertical, 8)
                     .background(
                         RoundedRectangle(cornerRadius: 18)
-                            .fill(isOutgoing ? Color(hex: "#5A9FEE") : Color.white.opacity(0.08))
+                            .fill(isOutgoing ? Color(.systemGray6) : Color.white.opacity(0.08))
                     )
                 }
 
@@ -487,7 +487,7 @@ struct ChatRoomView: View {
                 Button(action: sendMessage) {
                     Image(systemName: "paperplane.fill")
                         .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(messageText.isEmpty ? .gray : Color(hex: "#5A9FEE"))
+                        .foregroundColor(messageText.isEmpty ? .gray : Color(.systemGray6))
                         .rotationEffect(.degrees(45))
                 }
                 .disabled(messageText.isEmpty)
@@ -495,7 +495,7 @@ struct ChatRoomView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
-        .background(Color(hex: "#0A0A0F"))
+        .background(Color(.systemGray6))
     }
 
     // MARK: - Actions

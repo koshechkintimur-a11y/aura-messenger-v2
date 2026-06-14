@@ -20,8 +20,8 @@ struct ChatInfoView: View {
     @State private var showDeleteConfirmation: Bool = false
     @State private var showLeaveAlert: Bool = false
 
-    private let accent = Color(hex: "#5A9FEE")
-    private let background = Color(hex: "#0A0A0F")
+    private let accent = Color(.systemGray6)
+    private let background = Color(.systemGray6)
 
     // Участники (заглушка)
     @State private var members: [ChatMember] = [
@@ -283,7 +283,7 @@ struct MemberRow: View {
                     Circle()
                         .fill(Color.green)
                         .frame(width: 8, height: 8)
-                        .overlay(Circle().stroke(Color(hex: "#0A0A0F"), lineWidth: 2))
+                        .overlay(Circle().stroke(Color(.systemGray6), lineWidth: 2))
                         .offset(x: 2, y: 2)
                 }
             }
