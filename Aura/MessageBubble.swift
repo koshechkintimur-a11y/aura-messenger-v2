@@ -2,88 +2,81 @@ import SwiftUI
 
 struct MessageBubble: View {
     let message: ChatMessage
-    
-    private var bubbleColor: Color {
-        switch message.type {
-        case .outgoing:
-            return Color(red: 0, green: 0.48, blue: 1.0)
-        case .incoming:
-            return Color.gray.opacity(0.3)
-        case .system:
-            return Color.gray.opacity(0.5)
-        }
-    }
-    
-    private var textColor: Color {
-        switch message.type {
-        case .outgoing:
-            return .white
-        case .incoming:
-            return .primary
-        case .system:
-            return .white
-        }
-    }
-    
-    private var alignment: HorizontalAlignment {
-        switch message.type {
-        case .outgoing:
-            return .trailing
-        case .incoming:
-            return .leading
-        case .system:
-            return .center
-        }
-    }
-    
-    private var timeFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter
-    }
+    let isOutgoing: Bool
+    let onReply: () -> Void
+    let onForward: () -> Void
+    let onPin: () -> Void
     
     var body: some View {
-        HStack {
-            if message.type == .outgoing {
-                Spacer()
+        VStack(alignment: isOutgoing ? .trailing : .leading, spacing: 2) {
+            if message.isPinned {
+                HStack(spacing: 4) {
+                    Image(systemName: "pin.fill").font(.system(size: 8))
+                    Text("Закреплено").font(.system(size: 10))
+                }
+                .foregroundColor(.secondary)
+                .padding(.bottom, 2)
             }
             
-            VStack(alignment: alignment == .trailing ? .trailing : (alignment == .leading ? .leading : .center), spacing: 2) {
-                if let sender = message.senderName, message.type == .incoming {
-                    Text(sender)
-                        .font(.caption)
-                        .foregroundColor(.gray)
+            if let replyId = message.replyToId, !replyId.isEmpty {
+                Text("↩ Ответ").font(.system(size: 10)).foregroundColor(.secondary)
+            }
+            
+            HStack(alignment: .bottom, spacing: 4) {
+                if isOutgoing { Spacer(minLength: 60) }
+                
+                VStack(alignment: isOutgoing ? .trailing : .leading, spacing: 2) {
+                    if !isOutgoing && !message.senderName.isEmpty {
+                        Text(message.senderName)
+                            .font(.system(size: 11)).foregroundColor(.secondary)
+                    }
+                    
+                    if let imageB64 = message.imageBase64, !imageB64.isEmpty,
+                       let data = Data(base64Encoded: imageB64),
+                       let uiImage = UIImage(data: data) {
+                        Image(uiImage: uiImage)
+                            .resizable().scaledToFit()
+                            .frame(maxWidth: 200).cornerRadius(12)
+                    } else {
+                        Text(message.text)
+                            .font(.body)
+                            .padding(.horizontal, 12).padding(.vertical, 8)
+                            .background(isOutgoing ? Color(red: 0, green: 0.48, blue: 1.0) : Color(.systemGray5))
+                            .foregroundColor(isOutgoing ? .white : .primary)
+                            .cornerRadius(16)
+                    }
+                    
+                    HStack(spacing: 4) {
+                        Text(message.timestamp, style: .time)
+                            .font(.system(size: 10)).foregroundColor(.secondary)
+                        if isOutgoing {
+                            switch message.status {
+                            case .sending: Image(systemName: "clock").font(.system(size: 8))
+                            case .sent: Image(systemName: "checkmark").font(.system(size: 8))
+                            case .delivered: Image(systemName: "checkmark.circle").font(.system(size: 8))
+                            case .read: Image(systemName: "checkmark.circle.fill").font(.system(size: 8)).foregroundColor(.green)
+                            }
+                        }
+                    }
+                }
+                .contextMenu {
+                    Button { UIPasteboard.general.string = message.text } label: {
+                        Label("Копировать", systemImage: "doc.on.doc")
+                    }
+                    Button { onReply() } label: {
+                        Label("Ответить", systemImage: "arrowshape.turn.up.left")
+                    }
+                    Button { onForward() } label: {
+                        Label("Переслать", systemImage: "arrowshape.turn.up.right")
+                    }
+                    Button { onPin() } label: {
+                        Label(message.isPinned ? "Открепить" : "Закрепить", systemImage: message.isPinned ? "pin.slash" : "pin")
+                    }
                 }
                 
-                Text(message.text)
-                    .font(.body)
-                    .foregroundColor(textColor)
-                    .padding(10)
-                    .background(bubbleColor)
-                    .cornerRadius(12)
-                
-                Text(timeFormatter.string(from: message.time))
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-                    .padding(.horizontal, 4)
-            }
-            
-            if message.type == .incoming || message.type == .system {
-                Spacer()
+                if !isOutgoing { Spacer(minLength: 60) }
             }
         }
-        .padding(.horizontal, 8)
         .padding(.vertical, 2)
-    }
-}
-
-struct MessageBubble_Previews: PreviewProvider {
-    static var previews: some View {
-        VStack(spacing: 8) {
-            MessageBubble(message: ChatMessage(text: "Привет! Это моё сообщение.", time: Date(), type: .outgoing, senderName: nil))
-            MessageBubble(message: ChatMessage(text: "Привет! Ответ собеседника.", time: Date(), type: .incoming, senderName: "Алексей"))
-            MessageBubble(message: ChatMessage(text: "Пользователь вышел из комнаты", time: Date(), type: .system, senderName: nil))
-        }
-        .background(Color.black)
     }
 }
