@@ -1,13 +1,13 @@
 import SwiftUI
 
 struct MessageBubble: View {
-    let message: AuraMessage
+    let message: ChatMessage
     
     private var bubbleColor: Color {
         switch message.type {
-        case .own:
+        case .outgoing:
             return Color(red: 0, green: 0.48, blue: 1.0)
-        case .other:
+        case .incoming:
             return Color.gray.opacity(0.3)
         case .system:
             return Color.gray.opacity(0.5)
@@ -16,9 +16,9 @@ struct MessageBubble: View {
     
     private var textColor: Color {
         switch message.type {
-        case .own:
+        case .outgoing:
             return .white
-        case .other:
+        case .incoming:
             return .primary
         case .system:
             return .white
@@ -27,9 +27,9 @@ struct MessageBubble: View {
     
     private var alignment: HorizontalAlignment {
         switch message.type {
-        case .own:
+        case .outgoing:
             return .trailing
-        case .other:
+        case .incoming:
             return .leading
         case .system:
             return .center
@@ -44,12 +44,12 @@ struct MessageBubble: View {
     
     var body: some View {
         HStack {
-            if message.type == .own {
+            if message.type == .outgoing {
                 Spacer()
             }
             
             VStack(alignment: alignment == .trailing ? .trailing : (alignment == .leading ? .leading : .center), spacing: 2) {
-                if let sender = message.senderName, message.type == .other {
+                if let sender = message.senderName, message.type == .incoming {
                     Text(sender)
                         .font(.caption)
                         .foregroundColor(.gray)
@@ -68,7 +68,7 @@ struct MessageBubble: View {
                     .padding(.horizontal, 4)
             }
             
-            if message.type == .other || message.type == .system {
+            if message.type == .incoming || message.type == .system {
                 Spacer()
             }
         }
@@ -80,9 +80,9 @@ struct MessageBubble: View {
 struct MessageBubble_Previews: PreviewProvider {
     static var previews: some View {
         VStack(spacing: 8) {
-            MessageBubble(message: AuraMessage(text: "Привет! Это моё сообщение.", time: Date(), type: .own, senderName: nil))
-            MessageBubble(message: AuraMessage(text: "Привет! Ответ собеседника.", time: Date(), type: .other, senderName: "Алексей"))
-            MessageBubble(message: AuraMessage(text: "Пользователь вышел из комнаты", time: Date(), type: .system, senderName: nil))
+            MessageBubble(message: ChatMessage(text: "Привет! Это моё сообщение.", time: Date(), type: .outgoing, senderName: nil))
+            MessageBubble(message: ChatMessage(text: "Привет! Ответ собеседника.", time: Date(), type: .incoming, senderName: "Алексей"))
+            MessageBubble(message: ChatMessage(text: "Пользователь вышел из комнаты", time: Date(), type: .system, senderName: nil))
         }
         .background(Color.black)
     }

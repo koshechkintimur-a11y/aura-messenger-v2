@@ -30,7 +30,7 @@ struct ChatRoomView: View {
             // Input area
             inputArea
         }
-        .background(Color(hex: "0A0A0F"))
+        .background(Color(.systemGray6))
         .navigationBarBackButtonHidden(true)
         .navigationBarHidden(true)
         .actionSheet(isPresented: $showActionSheet) {
@@ -59,18 +59,18 @@ struct ChatRoomView: View {
             Button(action: { /* pop */ }) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(Color(hex: "5A9FEE"))
+                    .foregroundColor(Color(.systemGray6))
             }
 
             // Avatar
             ZStack {
                 Circle()
-                    .fill(Color(hex: "1C1C24"))
+                    .fill(Color(.systemGray6))
                     .frame(width: 40, height: 40)
 
                 Text(room?.name.prefix(1).uppercased() ?? "?")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color(hex: "8E8E93"))
+                    .foregroundColor(Color(.systemGray6))
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -83,17 +83,17 @@ struct ChatRoomView: View {
                     let memberCount = room?.members.count ?? 0
                     Text("\(memberCount) \(memberCount == 1 ? "участник" : "участников")")
                         .font(.system(size: 13))
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(Color(.systemGray6))
 
                     // Online status
                     if let firstMember = room?.members.first,
                        viewModel.isUserOnline(tag: firstMember) {
                         Circle()
-                            .fill(Color(hex: "34C759"))
+                            .fill(Color(.systemGray6))
                             .frame(width: 6, height: 6)
                     } else {
                         Circle()
-                            .fill(Color(0xFF453A))
+                            .fill(Color(.systemGray5))
                             .frame(width: 6, height: 6)
                     }
                 }
@@ -103,11 +103,11 @@ struct ChatRoomView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background((Color(hex: "0A0A0F") as Color).opacity(0.95))
+        .background((Color(.systemGray6)).opacity(0.95))
         .overlay(
             Rectangle()
                 .frame(height: 0.5)
-                .foregroundColor(Color(0x2C2C34)),
+                .foregroundColor(Color(.systemGray5)),
             alignment: .bottom
         )
     }
@@ -157,12 +157,12 @@ struct ChatRoomView: View {
                 // Sender avatar
                 ZStack {
                     Circle()
-                        .fill(Color(hex: "1C1C24"))
+                        .fill(Color(.systemGray6))
                         .frame(width: 28, height: 28)
 
                     Text(message.senderName.prefix(1).uppercased())
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(Color(.systemGray6))
                 }
             } else {
                 Spacer(minLength: 36)
@@ -172,7 +172,7 @@ struct ChatRoomView: View {
                 if !isOutgoing {
                     Text(message.senderName)
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(Color(.systemGray6))
                         .padding(.horizontal, 4)
                 }
 
@@ -181,22 +181,22 @@ struct ChatRoomView: View {
                    let repliedMessage = viewModel.messages.first(where: { $0.id == replyToId }) {
                     HStack(spacing: 4) {
                         Rectangle()
-                            .fill(Color(0x5A9FEE))
+                            .fill(Color(.systemGray5))
                             .frame(width: 3)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(repliedMessage.senderName)
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(Color(hex: "5A9FEE"))
+                                .foregroundColor(Color(.systemGray6))
 
                             Text(repliedMessage.text)
                                 .font(.system(size: 12))
-                                .foregroundColor(Color(hex: "8E8E93"))
+                                .foregroundColor(Color(.systemGray6))
                                 .lineLimit(2)
                         }
                     }
                     .padding(8)
-                    .background(Color(0x1C1C24))
+                    .background(Color(.systemGray5))
                     .cornerRadius(8)
                 }
 
@@ -215,13 +215,13 @@ struct ChatRoomView: View {
                 if !message.text.isEmpty {
                     HStack(alignment: .bottom, spacing: 6) {
                         messageContent(message.text, isOutgoing: isOutgoing)
-                            .foregroundColor(isOutgoing ? .white : Color(0xE5E5EA))
+                            .foregroundColor(isOutgoing ? .white : Color(.systemGray5))
 
                         // Timestamp & status
                         HStack(spacing: 2) {
                             Text(formattedTime(message.timestamp))
                                 .font(.system(size: 11))
-                                .foregroundColor(isOutgoing ? Color(0xFFFFFF).opacity(0.7) : Color(0x8E8E93))
+                                .foregroundColor(isOutgoing ? Color(.systemGray5).opacity(0.7) : Color(.systemGray5))
 
                             if isOutgoing {
                                 messageStatusIcon(message)
@@ -233,7 +233,7 @@ struct ChatRoomView: View {
                     .padding(.vertical, 8)
                     .background(
                         RoundedRectangle(cornerRadius: 18)
-                            .fill(isOutgoing ? Color(0x5A9FEE) : Color(0x2C2C34))
+                            .fill(isOutgoing ? Color(.systemGray5) : Color(.systemGray5))
                     )
                 }
 
@@ -241,7 +241,7 @@ struct ChatRoomView: View {
                 if message.forwardedFromTag != nil {
                     Text("Переслано")
                         .font(.system(size: 11))
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(Color(.systemGray6))
                         .padding(.horizontal, 4)
                 }
             }
@@ -269,25 +269,25 @@ struct ChatRoomView: View {
             case .sent:
                 Image(systemName: "checkmark")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(Color(0xFFFFFF).opacity(0.7))
+                    .foregroundColor(Color(.systemGray5).opacity(0.7))
             case .delivered:
                 Image(systemName: "checkmark")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(Color(0xFFFFFF).opacity(0.7))
+                    .foregroundColor(Color(.systemGray5).opacity(0.7))
             case .read:
                 HStack(spacing: 0) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(Color(0x34C759))
+                        .foregroundColor(Color(.systemGray5))
                     Image(systemName: "checkmark")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(Color(0x34C759))
+                        .foregroundColor(Color(.systemGray5))
                         .offset(x: -4)
                 }
             default:
                 Image(systemName: "clock")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(Color(0xFFFFFF).opacity(0.5))
+                    .foregroundColor(Color(.systemGray5).opacity(0.5))
             }
         }
     }
@@ -299,12 +299,12 @@ struct ChatRoomView: View {
             Spacer()
             Text(formattedDate(date))
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(Color(0x5C5C66))
+                .foregroundColor(Color(.systemGray5))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(
                     Capsule()
-                        .fill(Color(0x1C1C24).opacity(0.8))
+                        .fill(Color(.systemGray5).opacity(0.8))
                 )
             Spacer()
         }
@@ -316,17 +316,17 @@ struct ChatRoomView: View {
     private var replyIndicator: some View {
         HStack(spacing: 8) {
             Rectangle()
-                .fill(Color(0x5A9FEE))
+                .fill(Color(.systemGray5))
                 .frame(width: 3)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(replyToMessage?.senderName ?? "")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(Color(hex: "5A9FEE"))
+                    .foregroundColor(Color(.systemGray6))
 
                 Text(replyToMessage?.text ?? "")
                     .font(.system(size: 13))
-                    .foregroundColor(Color(hex: "8E8E93"))
+                    .foregroundColor(Color(.systemGray6))
                     .lineLimit(1)
             }
 
@@ -335,16 +335,16 @@ struct ChatRoomView: View {
             Button(action: { replyToMessage = nil }) {
                 Image(systemName: "xmark")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(Color(hex: "8E8E93"))
+                    .foregroundColor(Color(.systemGray6))
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(Color(0x1C1C24))
+        .background(Color(.systemGray5))
         .overlay(
             Rectangle()
                 .frame(height: 0.5)
-                .foregroundColor(Color(0x2C2C34)),
+                .foregroundColor(Color(.systemGray5)),
             alignment: .top
         )
     }
@@ -354,21 +354,21 @@ struct ChatRoomView: View {
     private var inputArea: some View {
         VStack(spacing: 0) {
             Divider()
-                .background(Color(0x2C2C34))
+                .background(Color(.systemGray5))
 
             HStack(spacing: 12) {
                 // Paperclip
                 Button(action: { /* Attach file */ }) {
                     Image(systemName: "paperclip")
                         .font(.system(size: 22, weight: .medium))
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(Color(.systemGray6))
                 }
 
                 // Text field
                 TextField("", text: $messageText)
                     .placeholder(when: messageText.isEmpty) {
                         Text("Сообщение...")
-                            .foregroundColor(Color(0x5C5C66))
+                            .foregroundColor(Color(.systemGray5))
                     }
                     .font(.system(size: 16))
                     .foregroundColor(.white)
@@ -376,14 +376,14 @@ struct ChatRoomView: View {
                     .padding(.vertical, 10)
                     .background(
                         RoundedRectangle(cornerRadius: 20)
-                            .fill(Color(hex: "1C1C24"))
+                            .fill(Color(.systemGray6))
                     )
 
                 // Send button
                 Button(action: sendMessage) {
                     Image(systemName: "paperplane.fill")
                         .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(messageText.isEmpty ? Color(0x5C5C66) : Color(0x5A9FEE))
+                        .foregroundColor(messageText.isEmpty ? Color(.systemGray5) : Color(.systemGray5))
                         .rotationEffect(.degrees(45))
                 }
                 .disabled(messageText.isEmpty)
@@ -391,7 +391,7 @@ struct ChatRoomView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
-        .background(Color(hex: "0A0A0F"))
+        .background(Color(.systemGray6))
     }
 
     // MARK: - Actions

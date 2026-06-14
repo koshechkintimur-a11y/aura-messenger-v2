@@ -27,7 +27,7 @@ struct JoinRoomView: View {
                     .padding()
                 }
             }
-            .navigationTitle("Вступить в чат", displayMode: .inline)
+            .navigationTitle("Вступить в чат", )
             .toolbarBackground(background, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
         }
