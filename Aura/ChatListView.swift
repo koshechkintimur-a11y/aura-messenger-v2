@@ -69,7 +69,7 @@ struct ChatListView: View {
     
     var chatList: some View {
         List(filtered) { room in
-            NavigationLink { ChatRoomView(roomName: room.name) } label: {
+            NavigationLink { ChatRoomView(viewModel: AuraViewModel()) } label: {
                 chatRow(room)
             }
             .swipeActions(edge: .trailing) {
