@@ -41,9 +41,9 @@ struct ChatListView: View {
         NavigationStack {
             List {
                 ForEach(filteredRooms) { room in
-                    NavigationLink(value: room) {
-                        ChatRow(room: room)
-                    }
+                    NavigationLink {
+                        ChatRoomView(roomName: room.name)
+                    } label: {
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
                             withAnimation {
