@@ -486,30 +486,3 @@ struct ChatRoomView: View {
         }
     }
 }
-
-// MARK: - Extensions
-
-extension View {
-    func placeholder<Content: View>(when shouldShow: Bool, alignment: Alignment = .leading, @ViewBuilder placeholder: () -> Content) -> some View {
-        ZStack(alignment: alignment) {
-            placeholder().opacity(shouldShow ? 1 : 0)
-            self
-        }
-    }
-}
-
-extension Color {
-    init(_ hex: Int) {
-        self.init(
-            red: Double((hex >> 16) & 0xFF) / 255,
-            green: Double((hex >> 8) & 0xFF) / 255,
-            blue: Double(hex & 0xFF) / 255
-        )
-    }
-}
-
-extension Data {
-    init?(base64Encoded: String) {
-        self.init(base64Encoded: base64Encoded)
-    }
-}

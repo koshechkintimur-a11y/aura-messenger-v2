@@ -47,7 +47,8 @@ struct ChatInfoView: View {
                     .padding()
                 }
             }
-            .navigationTitle("Информация о чате", displayMode: .inline)
+            .navigationTitle("Информация о чате")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(background, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .sheet(isPresented: $showTransferSheet) {
