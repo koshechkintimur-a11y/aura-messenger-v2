@@ -145,7 +145,9 @@ struct ChatRoomView: View {
                         }
                     }
                 }
-                Section("QR-код") { QRCodeView(roomId: viewModel.currentRoomId ?? "", inviteLink: "") }
+                Section("QR-код") { 
+                    Text("Код для приглашения").font(.caption).foregroundColor(.secondary)
+                }
                 Section("Пригласить по @тегу") {
                     HStack {
                         TextField("@username", text: .constant(""))
