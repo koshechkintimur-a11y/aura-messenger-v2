@@ -1,0 +1,45 @@
+name: Aura
+options:
+  bundleIdPrefix: com.aura.messenger
+  deploymentTarget:
+    iOS: "18.0"
+  xcodeVersion: "16.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    TARGETED_DEVICE_FAMILY: "1"
+    CODE_SIGN_IDENTITY: ""
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGNING_ALLOWED: "NO"
+
+targets:
+  Aura:
+    type: application
+    platform: iOS
+    sources:
+      - path: Aura
+        type: group
+    settings:
+      base:
+        INFOPLIST_FILE: Aura/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.aura.messenger
+        PRODUCT_NAME: Aura
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        FRAMEWORK_SEARCH_PATHS:
+          - "$(PROJECT_DIR)/Aura"
+        OTHER_LINKER_FLAGS:
+          - "-framework AuraRelay"
+    dependencies: []
+    preBuildScripts:
+      - name: "Build Go xcframework (local only)"
+        script: |
+          if command -v gomobile &> /dev/null; then
+            cd "$SRCROOT/../relay"
+            gomobile bind -target=ios -iosversion=18.0 \
+              -o "$SRCROOT/Aura/AuraRelay.xcframework" \
+              ./pion/ios
+          else
+            echo "Skipping gomobile — will use prebuilt xcframework from CI"
+          fi
+        basedOnDependencyAnalysis: false
