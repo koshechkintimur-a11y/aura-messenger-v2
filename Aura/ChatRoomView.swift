@@ -3,6 +3,7 @@ import CoreImage.CIFilterBuiltins
 
 struct ChatRoomView: View {
     @EnvironmentObject var viewModel: AuraViewModel
+    @Environment(\.dismiss) private var dismiss
     @State private var messageText: String = ""
     @State private var replyToMessage: ChatMessage? = nil
     @State private var selectedMessage: ChatMessage? = nil
@@ -13,6 +14,8 @@ struct ChatRoomView: View {
     @State private var showInviteSheet: Bool = false
     @State private var showWeightPopup: Bool = false
     @State private var weightPopupMessage: ChatMessage? = nil
+
+    @State private var showInfo = false
 
     var room: ChatRoom? {
         viewModel.currentRoom
@@ -39,6 +42,9 @@ struct ChatRoomView: View {
         .navigationBarHidden(true)
         .sheet(isPresented: $showInviteSheet) {
             inviteSheet
+        }
+        .sheet(isPresented: $showInfo) {
+            ChatInfoView().environmentObject(viewModel)
         }
         .actionSheet(isPresented: $showActionSheet) {
             ActionSheet(
@@ -73,7 +79,7 @@ struct ChatRoomView: View {
 
     private var roomHeader: some View {
         HStack(spacing: 12) {
-            Button(action: { /* pop */ }) {
+            Button(action: { dismiss() }) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(.white)
@@ -115,6 +121,13 @@ struct ChatRoomView: View {
             }
 
             Spacer()
+
+            // Info button
+            Button(action: { showInfo = true }) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(.white)
+            }
 
             // Invite button
             Button(action: { showInviteSheet = true }) {
@@ -470,11 +483,7 @@ struct ChatRoomView: View {
                         .foregroundColor(.gray)
                 }
 
-                TextField("", text: $messageText)
-                    .placeholder(when: messageText.isEmpty) {
-                        Text("Сообщение...")
-                            .foregroundColor(.gray)
-                    }
+                TextField("Сообщение...", text: $messageText)
                     .font(.system(size: 16))
                     .foregroundColor(.white)
                     .padding(.horizontal, 12)
