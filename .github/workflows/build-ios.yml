@@ -25,28 +25,23 @@ jobs:
           go install golang.org/x/mobile/cmd/gomobile@latest
           gomobile init
 
-      # ── Build Go → xcframework ──
       - name: Build AuraRelay.xcframework
         run: |
           cd relay
           go get ./...
-          gomobile bind \
-            -target=ios \
-            -iosversion=18.0 \
-            -o ../Aura/AuraRelay.xcframework \
-            ./pion/ios
+          gomobile bind -target=ios -iosversion=18.0 -o ../Aura/AuraRelay.xcframework ./pion/ios
 
-      # ── Generate Xcode project ──
       - name: Generate Xcode project
+        working-directory: Aura
         run: |
-          xcodegen generate --spec project.yml --project Aura
-          ls -la Aura/Aura.xcodeproj/
+          xcodegen generate --spec project.yml
+          ls -la Aura.xcodeproj/
 
-      # ── Build Swift → unsigned IPA ──
       - name: Build iOS app
+        working-directory: Aura
         run: |
           xcodebuild \
-            -project Aura/Aura.xcodeproj \
+            -project Aura.xcodeproj \
             -scheme Aura \
             -sdk iphoneos \
             -configuration Release \
@@ -55,11 +50,10 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      # ── Package IPA ──
       - name: Package IPA
         run: |
           mkdir -p Payload
-          cp -r .build/Build/Products/Release-iphoneos/Aura.app Payload/
+          cp -r Aura/.build/Build/Products/Release-iphoneos/Aura.app Payload/
           zip -r Aura-unsigned.ipa Payload
 
       - uses: actions/upload-artifact@v4
