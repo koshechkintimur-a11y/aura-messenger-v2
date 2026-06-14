@@ -13,7 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ── 1. Install tools ──
       - name: Install XcodeGen
         run: brew install xcodegen
 
@@ -26,7 +25,7 @@ jobs:
           go install golang.org/x/mobile/cmd/gomobile@latest
           gomobile init
 
-      # ── 2. Build Go → xcframework ──
+      # ── Build Go → xcframework ──
       - name: Build AuraRelay.xcframework
         run: |
           cd relay
@@ -37,12 +36,13 @@ jobs:
             -o ../Aura/AuraRelay.xcframework \
             ./pion/ios
 
-      # ── 3. Generate Xcode project ──
+      # ── Generate Xcode project ──
       - name: Generate Xcode project
         run: |
-          xcodegen generate --spec project.yml --project Aura
+          xcodegen generate --spec project.yml --project Aura.xcodeproj
+          ls -la Aura.xcodeproj/
 
-      # ── 4. Build Swift → unsigned IPA ──
+      # ── Build Swift → unsigned IPA ──
       - name: Build iOS app
         run: |
           xcodebuild \
@@ -55,14 +55,13 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      # ── 5. Package IPA ──
+      # ── Package IPA ──
       - name: Package IPA
         run: |
           mkdir -p Payload
           cp -r .build/Build/Products/Release-iphoneos/Aura.app Payload/
           zip -r Aura-unsigned.ipa Payload
 
-      # ── 6. Upload artifact ──
       - uses: actions/upload-artifact@v4
         with:
           name: Aura-iOS
