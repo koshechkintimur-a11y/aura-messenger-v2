@@ -40,13 +40,13 @@ jobs:
       - name: Generate Xcode project
         run: |
           xcodegen generate --spec project.yml --project Aura
-          ls -la Aura.xcodeproj/
+          ls -la Aura/Aura.xcodeproj/
 
       # ── Build Swift → unsigned IPA ──
       - name: Build iOS app
         run: |
           xcodebuild \
-            -project Aura.xcodeproj \
+            -project Aura/Aura.xcodeproj \
             -scheme Aura \
             -sdk iphoneos \
             -configuration Release \
