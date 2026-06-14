@@ -11,7 +11,7 @@ struct ChatRoomView: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var previewImage: UIImage?
     @State private var showPreview = false
-    @State private var farcodeEnabled = false
+    @AppStorage("farcodeEnabled") private var farcodeEnabled = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -26,18 +26,22 @@ struct ChatRoomView: View {
         .sheet(isPresented: $showInfo) { ChatInfoView().environmentObject(viewModel) }
         .sheet(isPresented: $showInvite) { inviteSheet }
         .fullScreenCover(isPresented: $showPreview) {
-            ZStack {
-                Color.black.ignoresSafeArea()
-                if let img = previewImage {
-                    Image(uiImage: img).resizable().scaledToFit()
-                }
-                VStack {
-                    HStack { Spacer()
-                        Button { showPreview = false } label: {
-                            Image(systemName: "xmark.circle.fill").font(.title).foregroundColor(.white).padding()
-                        }
+            if let img = previewImage {
+                ZStack(alignment: .topTrailing) {
+                    Color.black.ignoresSafeArea()
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    Button {
+                        showPreview = false
+                        previewImage = nil
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.largeTitle)
+                            .foregroundColor(.white)
+                            .padding()
                     }
-                    Spacer()
                 }
             }
         }
@@ -52,11 +56,22 @@ struct ChatRoomView: View {
                 Image(systemName: "chevron.left").font(.title3).foregroundColor(.white)
             }
             Button { showInfo = true } label: {
-                ZStack {
-                    Circle().fill(Color.blue.opacity(0.2)).frame(width: 36, height: 36)
-                    Text(String(viewModel.currentRoom?.name.prefix(1) ?? "?").uppercased()).font(.subheadline).foregroundColor(.blue)
-                }
-                VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 10) {
+                    Group {
+                        if let b64 = viewModel.currentRoom?.avatarBase64,
+                           let data = Data(base64Encoded: b64),
+                           let img = UIImage(data: data) {
+                            Image(uiImage: img).resizable().scaledToFill()
+                                .frame(width: 36, height: 36).clipShape(Circle())
+                        } else {
+                            ZStack {
+                                Circle().fill(Color.blue.opacity(0.2)).frame(width: 36, height: 36)
+                                Text(String(viewModel.currentRoom?.name.prefix(1) ?? "?").uppercased())
+                                    .font(.subheadline).foregroundColor(.blue)
+                            }
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: 1) {
                     Text(viewModel.currentRoom?.name ?? "Чат").font(.subheadline).fontWeight(.semibold).foregroundColor(.white)
                     HStack(spacing: 4) {
                         Circle().fill(viewModel.isConnected ? Color.green : Color.red).frame(width: 6, height: 6)
