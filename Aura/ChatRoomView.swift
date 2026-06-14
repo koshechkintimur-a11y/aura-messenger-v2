@@ -23,23 +23,24 @@ struct ChatRoomView: View {
         .background(Color.black)
         .navigationBarBackButtonHidden(true)
         .navigationBarHidden(true)
+        .gesture(DragGesture().onEnded { g in if g.translation.width > 100 { dismiss() } })
         .sheet(isPresented: $showInfo) { ChatInfoView().environmentObject(viewModel) }
         .sheet(isPresented: $showInvite) { inviteSheet }
         .sheet(isPresented: $showPreview) {
             if let img = previewImage {
                 ZStack(alignment: .topTrailing) {
                     Color.black.ignoresSafeArea()
-                    Image(uiImage: img)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    Button {
-                        showPreview = false
-                        previewImage = nil
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.largeTitle)
-                            .foregroundColor(.white).padding()
+                    Image(uiImage: img).resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity)
+                    HStack {
+                        Button {
+                            UIImageWriteToSavedPhotosAlbum(img, nil, nil, nil)
+                        } label: {
+                            Image(systemName: "square.and.arrow.down").font(.title2).foregroundColor(.white).padding()
+                        }
+                        Spacer()
+                        Button { showPreview = false; previewImage = nil } label: {
+                            Image(systemName: "xmark.circle.fill").font(.largeTitle).foregroundColor(.white).padding()
+                        }
                     }
                 }
             }
@@ -48,47 +49,36 @@ struct ChatRoomView: View {
         .onDisappear { viewModel.setOnline(false) }
     }
     
-    // MARK: Header
     var header: some View {
         HStack(spacing: 10) {
-            Button { dismiss() } label: {
-                Image(systemName: "chevron.left").font(.title3).foregroundColor(.white)
-            }
+            Button { dismiss() } label: { Image(systemName: "chevron.left").font(.title3).foregroundColor(.white) }
             Button { showInfo = true } label: {
                 HStack(spacing: 10) {
                     Group {
-                        if let b64 = viewModel.currentRoom?.avatarBase64,
-                           let data = Data(base64Encoded: b64),
-                           let img = UIImage(data: data) {
-                            Image(uiImage: img).resizable().scaledToFill()
-                                .frame(width: 36, height: 36).clipShape(Circle())
+                        if let b64 = viewModel.currentRoom?.avatarBase64, let d = Data(base64Encoded: b64), let img = UIImage(data: d) {
+                            Image(uiImage: img).resizable().scaledToFill().frame(width: 36, height: 36).clipShape(Circle())
                         } else {
                             ZStack {
                                 Circle().fill(Color.blue.opacity(0.2)).frame(width: 36, height: 36)
-                                Text(String(viewModel.currentRoom?.name.prefix(1) ?? "?").uppercased())
-                                    .font(.subheadline).foregroundColor(.blue)
+                                Text(String(viewModel.currentRoom?.name.prefix(1) ?? "?")).font(.subheadline).foregroundColor(.blue)
                             }
                         }
                     }
                     VStack(alignment: .leading, spacing: 1) {
-                    Text(viewModel.currentRoom?.name ?? "Чат").font(.subheadline).fontWeight(.semibold).foregroundColor(.white)
-                    HStack(spacing: 4) {
-                        Circle().fill(viewModel.isConnected ? Color.green : Color.red).frame(width: 6, height: 6)
-                        Text(viewModel.isConnected ? "онлайн" : "офлайн").font(.caption2).foregroundColor(.secondary)
+                        Text(viewModel.currentRoom?.name ?? "Чат").font(.subheadline).fontWeight(.semibold).foregroundColor(.white)
+                        HStack(spacing: 4) {
+                            Circle().fill(viewModel.isConnected ? Color.green : Color.red).frame(width: 6, height: 6)
+                            Text(viewModel.isConnected ? "онлайн" : "офлайн").font(.caption2).foregroundColor(.secondary)
+                        }
                     }
                 }
             }
-            }
             Spacer()
-            Button { showInvite = true } label: {
-                Image(systemName: "person.badge.plus").font(.title3).foregroundColor(.white)
-            }
+            Button { showInvite = true } label: { Image(systemName: "person.badge.plus").font(.title3).foregroundColor(.white) }
         }
-        .padding(.horizontal, 12).padding(.vertical, 8)
-        .background(Color(.systemGray6).opacity(0.95))
+        .padding(.horizontal, 12).padding(.vertical, 8).background(Color(.systemGray6).opacity(0.95))
     }
     
-    // MARK: Messages
     var messagesScroll: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -102,50 +92,37 @@ struct ChatRoomView: View {
                             onPin: { viewModel.pinMessage(msg.id, roomId: msg.roomId) },
                             onImageTap: { img in previewImage = img; showPreview = true },
                             farcodeEnabled: farcodeEnabled
-                        )
-                        .id(msg.id)
-                        .padding(.horizontal, 8)
+                        ).id(msg.id).padding(.horizontal, 8)
                     }
                     Color.clear.frame(height: 1).id("bottom")
                 }
             }
-            .onChange(of: viewModel.currentMessages.count) { _ in
-                withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
-            }
-            .onAppear { proxy.scrollTo("bottom", anchor: .bottom) }
+            .onChange(of: viewModel.currentMessages.count) { _ in withAnimation { proxy.scrollTo("bottom") } }
+            .onAppear { proxy.scrollTo("bottom") }
         }
     }
     
-    // MARK: Input
     var inputBar: some View {
         HStack(spacing: 8) {
             PhotosPicker(selection: $photoItem, matching: .images) {
                 Image(systemName: "paperclip").font(.body).foregroundColor(.secondary)
-            }
-            .onChange(of: photoItem) { _, item in
+            }.onChange(of: photoItem) { _, item in
                 Task {
-                    if let data = try? await item?.loadTransferable(type: Data.self),
-                       let rid = viewModel.currentRoomId {
+                    if let data = try? await item?.loadTransferable(type: Data.self), let rid = viewModel.currentRoomId {
                         viewModel.sendPhoto(roomId: rid, imageData: data)
+                        photoItem = nil
                     }
                 }
             }
-            
-            TextField("Сообщение...", text: $text, axis: .vertical)
-                .lineLimit(1...5)
-                .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(Color(.systemGray5)).cornerRadius(20)
-                .submitLabel(.send)
-                .onSubmit { send() }
-            
+            TextField("Сообщение...", text: $text, axis: .vertical).lineLimit(1...5)
+                .padding(.horizontal, 12).padding(.vertical, 8).background(Color(.systemGray5)).cornerRadius(20)
+                .submitLabel(.send).onSubmit { send() }
             Button { send() } label: {
                 Image(systemName: "arrow.up.circle.fill").font(.title2)
                     .foregroundColor(text.trimmingCharacters(in: .whitespaces).isEmpty ? .secondary : .blue)
-            }
-            .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
+            }.disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
         }
-        .padding(.horizontal, 8).padding(.vertical, 6)
-        .background(Color(.systemGray6))
+        .padding(.horizontal, 8).padding(.vertical, 6).background(Color(.systemGray6))
     }
     
     func send() {
@@ -164,9 +141,7 @@ struct ChatRoomView: View {
             }
             Spacer()
             Button { replyTo = nil } label: { Image(systemName: "xmark.circle.fill").foregroundColor(.secondary) }
-        }
-        .padding(.horizontal, 12).padding(.vertical, 8)
-        .background(Color(.systemGray6))
+        }.padding(.horizontal, 12).padding(.vertical, 8).background(Color(.systemGray6))
     }
     
     var inviteSheet: some View {
@@ -176,27 +151,20 @@ struct ChatRoomView: View {
                     HStack {
                         Text(viewModel.currentRoom?.url ?? "Создайте чат...").font(.caption.monospaced()).lineLimit(1)
                         Spacer()
-                        Button { UIPasteboard.general.string = viewModel.currentRoom?.url } label: {
-                            Image(systemName: "doc.on.doc")
-                        }
+                        Button { UIPasteboard.general.string = viewModel.currentRoom?.url } label: { Image(systemName: "doc.on.doc") }
                     }
                 }
-                Section("QR-код") { 
-                    Text("Код для приглашения").font(.caption).foregroundColor(.secondary)
-                }
+                Section("QR") { Text("QR-код").font(.caption).foregroundColor(.secondary) }
                 Section("Пригласить по @тегу") {
-                    HStack {
-                        TextField("@username", text: .constant(""))
-                        Button("Отправить") {}
-                    }
+                    HStack { TextField("@username", text: .constant("")); Button("Отправить") {} }
                 }
-            }
-            .navigationTitle("Пригласить").navigationBarTitleDisplayMode(.inline)
+            }.navigationTitle("Пригласить").navigationBarTitleDisplayMode(.inline)
         }
     }
 }
 
 // MARK: - MessageBubble
+
 struct MessageBubble: View {
     let message: ChatMessage
     let isOutgoing: Bool
@@ -209,32 +177,25 @@ struct MessageBubble: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 6) {
             if isOutgoing { Spacer(minLength: 60) }
-            
             if !isOutgoing {
                 ZStack {
                     Circle().fill(Color.blue.opacity(0.2)).frame(width: 28, height: 28)
                     Text(String(message.senderName.prefix(1)).uppercased()).font(.caption2).foregroundColor(.blue)
                 }
             }
-            
             VStack(alignment: isOutgoing ? .trailing : .leading, spacing: 2) {
                 if !isOutgoing && !message.senderName.isEmpty {
                     Text(message.senderName).font(.caption2).foregroundColor(.secondary)
                 }
-                
                 if let img = message.imageBase64, let d = Data(base64Encoded: img), let ui = UIImage(data: d) {
                     Image(uiImage: ui).resizable().scaledToFit().frame(maxWidth: 200).cornerRadius(12)
                         .onTapGesture { onImageTap(ui) }
                 }
-                
                 if !message.text.isEmpty {
-                    Text(message.text).font(.body)
-                        .padding(.horizontal, 12).padding(.vertical, 8)
+                    Text(message.text).font(.body).padding(.horizontal, 12).padding(.vertical, 8)
                         .background(isOutgoing ? Color.blue : Color(.systemGray5))
-                        .foregroundColor(isOutgoing ? .white : .primary)
-                        .cornerRadius(16)
+                        .foregroundColor(isOutgoing ? .white : .primary).cornerRadius(16)
                 }
-                
                 HStack(spacing: 3) {
                     Text(message.timestamp, style: .time).font(.system(size: 10)).foregroundColor(.secondary)
                     if isOutgoing {
@@ -252,16 +213,14 @@ struct MessageBubble: View {
                 Button { onReply() } label: { Label("Ответить", systemImage: "arrowshape.turn.up.left") }
                 Button { onForward() } label: { Label("В Избранное", systemImage: "star") }
                 Button { onPin() } label: { Label(message.isPinned ? "Открепить" : "Закрепить", systemImage: "pin") }
+                if let imgB64 = message.imageBase64, let d = Data(base64Encoded: imgB64), let img = UIImage(data: d) {
+                    Button { UIImageWriteToSavedPhotosAlbum(img, nil, nil, nil) } label: { Label("Сохранить фото", systemImage: "square.and.arrow.down") }
+                }
                 if farcodeEnabled {
-                    let origKB = max(1, (message.text.utf8.count + (message.imageBase64?.utf8.count ?? 0)) / 1024)
-                    let compKB = max(1, origKB * 2 / 5)
-                    Text("Исходный: \(origKB)KB → Отправлено: \(compKB)KB")
-                        .font(.caption2)
+                    Text("Вес: \(max(1, (message.text.utf8.count + (message.imageBase64?.utf8.count ?? 0)) / 1024))KB").font(.caption2).foregroundColor(.secondary)
                 }
             }
-            
             if !isOutgoing { Spacer(minLength: 60) }
-        }
-        .padding(.vertical, 1)
+        }.padding(.vertical, 1)
     }
 }

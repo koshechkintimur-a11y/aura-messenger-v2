@@ -17,23 +17,29 @@ class AuraRelayBridge: ObservableObject {
     }
     
     func connectToRoom(uri: String, peerID: String, roomID: String, credentials: String, mediaURL: String) {
-        // TODO: call IosConnect(mediaURL, roomID, peerID, credentials, "telemost", callback)
-        // The Go relay will:
-        // 1. Open WebSocket to Yandex SFU
-        // 2. Send hello with capabilities
-        // 3. Negotiate SDP (subscriber + publisher)
-        // 4. Open DataChannel "aura-chat"
-        // 5. Route messages through DataChannel
+        // Connect to VPS bridge WebSocket for real-time chat
+        let wsURL = "wss://golubot.ru/tm/chat?uri=\(uri.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? uri)&role=host"
+        guard let url = URL(string: wsURL) else { return }
+        
+        let session = URLSession(configuration: .default)
+        wsTask = session.webSocketTask(with: url)
+        wsTask?.resume()
         connected = true
+        receiveMessage()
     }
     
     func sendText(_ text: String) {
-        // TODO: call IosSendText(text)
-        // This sends through the DataChannel to SFU → other peers
+        guard let ws = wsTask else { return }
+        ws.send(.string(text)) { err in
+            if let err = err { print("[Relay] send error: \(err)") }
+        }
     }
     
     func sendImage(_ jpegData: Data, fileName: String) {
-        // TODO: call IosSendImage(jpegData, fileName)
+        // Images go as base64 JSON through the same WebSocket
+        let b64 = jpegData.base64EncodedString()
+        let json = "{\"type\":\"media\",\"name\":\"\(fileName)\",\"data\":\"\(b64)\"}"
+        sendText(json)
     }
     
     func disconnect() {
@@ -225,7 +231,7 @@ class AuraViewModel: ObservableObject {
     
     func pinMessage(_ msgId: String, roomId: String) {
         if let i = rooms.firstIndex(where: { $0.id == roomId }) { rooms[i].pinnedMessageId = msgId; saveRooms() }
-        if let mi = messages.firstIndex(where: { $0.id == msgId }) { messages[mi].isPinned = true }
+        if let mi = messages.firstIndex(where: { $0.id == msgId }) { messages[mi].isPinned = !messages[mi].isPinned; saveMessages() }
     }
     
     func markRead(_ msgId: String) {
@@ -270,6 +276,7 @@ class AuraViewModel: ObservableObject {
         copy.timestamp = Date()
         copy.forwardedFromTag = orig.senderTag
         messages.append(copy)
+        saveAll()
     }
     
     // MARK: Cache
