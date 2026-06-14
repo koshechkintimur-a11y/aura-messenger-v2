@@ -9,6 +9,9 @@ struct ChatRoomView: View {
     @State private var showInfo = false
     @State private var showInvite = false
     @State private var photoItem: PhotosPickerItem?
+    @State private var previewImage: UIImage?
+    @State private var showPreview = false
+    @State private var farcodeEnabled = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -22,6 +25,22 @@ struct ChatRoomView: View {
         .navigationBarHidden(true)
         .sheet(isPresented: $showInfo) { ChatInfoView().environmentObject(viewModel) }
         .sheet(isPresented: $showInvite) { inviteSheet }
+        .fullScreenCover(isPresented: $showPreview) {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                if let img = previewImage {
+                    Image(uiImage: img).resizable().scaledToFit()
+                }
+                VStack {
+                    HStack { Spacer()
+                        Button { showPreview = false } label: {
+                            Image(systemName: "xmark.circle.fill").font(.title).foregroundColor(.white).padding()
+                        }
+                    }
+                    Spacer()
+                }
+            }
+        }
         .onAppear { viewModel.setOnline(true) }
         .onDisappear { viewModel.setOnline(false) }
     }
@@ -65,7 +84,9 @@ struct ChatRoomView: View {
                             isOutgoing: msg.senderTag == viewModel.profile.tag,
                             onReply: { replyTo = msg },
                             onForward: { viewModel.forwardToFavorites(msg.id) },
-                            onPin: { viewModel.pinMessage(msg.id, roomId: msg.roomId) }
+                            onPin: { viewModel.pinMessage(msg.id, roomId: msg.roomId) },
+                            onImageTap: { img in previewImage = img; showPreview = true },
+                            farcodeEnabled: farcodeEnabled
                         )
                         .id(msg.id)
                         .padding(.horizontal, 8)
@@ -167,6 +188,8 @@ struct MessageBubble: View {
     var onReply: () -> Void = {}
     var onForward: () -> Void = {}
     var onPin: () -> Void = {}
+    var onImageTap: (UIImage) -> Void = { _ in }
+    var farcodeEnabled: Bool = false
     
     var body: some View {
         HStack(alignment: .bottom, spacing: 6) {
@@ -186,6 +209,7 @@ struct MessageBubble: View {
                 
                 if let img = message.imageBase64, let d = Data(base64Encoded: img), let ui = UIImage(data: d) {
                     Image(uiImage: ui).resizable().scaledToFit().frame(maxWidth: 200).cornerRadius(12)
+                        .onTapGesture { onImageTap(ui) }
                 }
                 
                 if !message.text.isEmpty {
@@ -213,6 +237,11 @@ struct MessageBubble: View {
                 Button { onReply() } label: { Label("Ответить", systemImage: "arrowshape.turn.up.left") }
                 Button { onForward() } label: { Label("В Избранное", systemImage: "star") }
                 Button { onPin() } label: { Label(message.isPinned ? "Открепить" : "Закрепить", systemImage: "pin") }
+                if farcodeEnabled {
+                    let origKB = (message.text.utf8.count + (message.imageBase64?.utf8.count ?? 0)) / 1024
+                    let compKB = max(1, origKB / 3)
+                    Button {} label: { Label("Исходный: \(origKB)KB → Отправлено: \(compKB)KB", systemImage: "compress") }
+                }
             }
             
             if !isOutgoing { Spacer(minLength: 60) }

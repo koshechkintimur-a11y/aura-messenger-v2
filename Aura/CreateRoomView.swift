@@ -3,152 +3,122 @@ import PhotosUI
 
 struct CreateRoomView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var viewModel: AuraViewModel
-
-    @State private var roomName: String = ""
-    @State private var avatarItem: PhotosPickerItem?
-    @State private var avatarImage: Image?
-    @State private var isPublic: Bool = false
-    @State private var roomURL: String = ""
-
-    @State private var isCreated: Bool = false
-    @State private var createdRoomId: String = ""
-    @State private var generatedLink: String = ""
-    @State private var tagInput: String = ""
-    @State private var showCopied: Bool = false
-    @State private var showInviteSheet: Bool = false
-
-    private let accent = Color(.systemGray6)
-    private let background = Color(.systemGray6)
-
+    @EnvironmentObject var vm: AuraViewModel
+    
+    @State private var name = ""
+    @State private var isPublic = false
+    @State private var roomURL = ""
+    @State private var created = false
+    @State private var createdRoom: ChatRoom?
+    @State private var tagInput = ""
+    
     var body: some View {
         NavigationStack {
-            ZStack {
-                background.ignoresSafeArea()
-
-                ScrollView {
-                    VStack(spacing: 24) {
-                        if !isCreated {
-                            createForm
-                        }
-                    }
-                    .padding()
+            Group {
+                if created, let room = createdRoom {
+                    createdView(room)
+                } else {
+                    formView
                 }
             }
-            .navigationTitle("Создать чат")
+            .navigationTitle(created ? "Чат создан" : "Новый чат")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(background, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .navigationDestination(isPresented: $isCreated) {
-                ChatRoomView()
-                    .environmentObject(viewModel)
-            }
+            .toolbar { if !created { ToolbarItem(placement: .cancellationAction) { Button("Отмена") { dismiss() } } } }
         }
+        .preferredColorScheme(.dark)
     }
-
-    // MARK: - Форма создания
-
-    private var createForm: some View {
+    
+    var formView: some View {
         VStack(spacing: 20) {
-            PhotosPicker(selection: $avatarItem, matching: .images) {
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.06))
-                        .frame(width: 60, height: 60)
-                    if let avatarImage {
-                        avatarImage
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 60, height: 60)
-                            .clipShape(Circle())
-                    } else {
-                        Image(systemName: "camera.fill")
-                            .font(.system(size: 22))
-                            .foregroundColor(accent)
-                    }
+            Spacer().frame(height: 10)
+            Image(systemName: "plus.bubble.fill").font(.system(size: 44)).foregroundColor(.blue)
+            
+            TextField("Название чата", text: $name)
+                .textFieldStyle(.roundedBorder).padding(.horizontal, 24)
+            
+            Toggle(isOn: $isPublic) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Публичный чат").font(.body)
+                    Text("Доступен для поиска по URL").font(.caption).foregroundColor(.secondary)
                 }
-            }
-            .onChange(of: avatarItem) { _, newItem in
-                Task {
-                    if let data = try? await newItem?.loadTransferable(type: Data.self),
-                       let uiImage = UIImage(data: data) {
-                        avatarImage = Image(uiImage: uiImage)
-                    }
-                }
-            }
-
-            // Название чата
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Название чата")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.gray)
-                TextField("", text: $roomName)
-                    .textFieldStyle(.plain)
-                    .foregroundColor(.white)
-                    .padding()
-                    .background(Color.white.opacity(0.05))
-                    .cornerRadius(10)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                    )
-            }
-
-            // Публичный чат toggle
-            VStack(alignment: .leading, spacing: 4) {
-                Toggle("Публичный чат", isOn: $isPublic)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.white)
-                    .tint(accent)
-                Text("Публичный чат доступен для поиска по URL. Приватный — только по приглашению.")
-                    .font(.system(size: 12))
-                    .foregroundColor(.gray)
-                    .lineLimit(nil)
-            }
-
+            }.padding(.horizontal, 24)
+            
             if isPublic {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("URL чата")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.gray)
-                    TextField("", text: $roomURL)
-                        .textFieldStyle(.plain)
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(Color.white.opacity(0.05))
-                        .cornerRadius(10)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                        )
-                    Text("Уникальный адрес: aura.app/c/ВАШ-URL. Только латиница, цифры и дефис.")
-                        .font(.system(size: 12))
-                        .foregroundColor(.gray)
-                        .lineLimit(nil)
-                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("URL чата").font(.caption).foregroundColor(.secondary)
+                    HStack {
+                        Text("aura.app/c/").foregroundColor(.secondary)
+                        TextField("vash-url", text: $roomURL)
+                            .autocorrectionDisabled().textInputAutocapitalization(.never)
+                    }
+                    .padding(10).background(Color(.systemGray6)).cornerRadius(8)
+                }.padding(.horizontal, 24)
             }
-
-            Button(action: createRoom) {
-                Text("Создать чат")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(accent)
-                    .cornerRadius(12)
-            }
+            
+            Button {
+                let n = name.trimmingCharacters(in: .whitespaces)
+                guard !n.isEmpty else { return }
+                let url = isPublic ? "aura.app/c/\(roomURL)" : nil
+                let room = vm.createRoom(name: n, isPublic: isPublic, url: url)
+                createdRoom = room; created = true
+            } label: {
+                Text("Создать чат").fontWeight(.semibold).frame(maxWidth: .infinity)
+                    .padding(.vertical, 14).background(name.isEmpty ? Color.gray : Color.blue)
+                    .foregroundColor(.white).cornerRadius(14)
+            }.disabled(name.isEmpty).padding(.horizontal, 24)
+            
+            Spacer()
         }
     }
-
-    private func createRoom() {
-        guard !roomName.isEmpty else { return }
-        let slug = roomURL.isEmpty ? UUID().uuidString.prefix(8).lowercased() : roomURL
-        generatedLink = "https://aura.app/c/\(slug)"
-        let room = viewModel.createRoom(name: roomName, isPublic: isPublic, url: isPublic ? slug : nil)
-        createdRoomId = room.id
-        viewModel.currentRoomId = room.id
-        withAnimation(.easeInOut(duration: 0.3)) {
-            isCreated = true
+    
+    func createdView(_ room: ChatRoom) -> some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                Image(systemName: "checkmark.seal.fill").font(.system(size: 44)).foregroundColor(.green).padding(.top, 20)
+                Text(room.name).font(.title3).fontWeight(.bold)
+                
+                // Invite link
+                VStack(spacing: 4) {
+                    Text("Ссылка-приглашение").font(.caption).foregroundColor(.secondary)
+                    let link = "https://golubot.ru/j/\(String(room.id.prefix(12)))"
+                    Text(link).font(.caption2.monospaced()).padding(8).background(Color(.systemGray6)).cornerRadius(8)
+                    Button { UIPasteboard.general.string = link } label: {
+                        Label("Копировать ссылку", systemImage: "doc.on.doc").frame(maxWidth: .infinity).padding(.vertical, 10)
+                            .background(Color.blue).foregroundColor(.white).cornerRadius(12)
+                    }
+                }.padding(.horizontal, 20)
+                
+                // QR placeholder
+                VStack(spacing: 4) {
+                    Text("QR-код").font(.caption).foregroundColor(.secondary)
+                    Image(systemName: "qrcode").font(.system(size: 80)).foregroundColor(.secondary)
+                    Text("Отсканируйте чтобы присоединиться").font(.caption2).foregroundColor(.secondary)
+                }.padding().background(Color(.systemGray6)).cornerRadius(12)
+                
+                // Tag invite
+                VStack(spacing: 8) {
+                    Text("Пригласить по @тегу").font(.subheadline).fontWeight(.medium)
+                    HStack {
+                        TextField("@username", text: $tagInput).autocorrectionDisabled().textInputAutocapitalization(.never)
+                            .padding(10).background(Color(.systemGray6)).cornerRadius(8)
+                        Button("Отправить") {}.font(.subheadline).fontWeight(.semibold)
+                            .padding(.horizontal, 14).padding(.vertical, 10).background(Color.orange).foregroundColor(.white).cornerRadius(8)
+                    }
+                }.padding(.horizontal, 20)
+                
+                Divider().padding(.horizontal, 20)
+                
+                Button {
+                    vm.currentRoomId = room.id
+                    dismiss()
+                } label: {
+                    Label("Войти в чат", systemImage: "bubble.left.and.bubble.right.fill")
+                        .fontWeight(.semibold).frame(maxWidth: .infinity).padding(.vertical, 14)
+                        .background(Color.green).foregroundColor(.white).cornerRadius(14)
+                }.padding(.horizontal, 20)
+                
+                Spacer(minLength: 30)
+            }
         }
     }
 }
