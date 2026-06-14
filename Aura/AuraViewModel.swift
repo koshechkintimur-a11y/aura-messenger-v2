@@ -115,6 +115,7 @@ class AuraViewModel: ObservableObject {
         loadProfile()
         loadRooms()
         loadFolders()
+        loadSavedMessages()
         relay.initialize(brokerURL: "https://golubot.ru/tm")
         
         NotificationCenter.default.addObserver(forName: .relayMessageReceived, object: nil, queue: .main) { [weak self] n in
@@ -142,6 +143,16 @@ class AuraViewModel: ObservableObject {
     }
     private func saveRooms() {
         if let d = try? JSONEncoder().encode(rooms) { userDefaults.set(d, forKey: roomsKey) }
+    }
+    
+    func saveMessages() {
+        if let d = try? JSONEncoder().encode(messages.suffix(500)) { userDefaults.set(d, forKey: "aura_messages") }
+    }
+    func loadSavedMessages() {
+        if let d = userDefaults.data(forKey: "aura_messages"),
+           let saved = try? JSONDecoder().decode([ChatMessage].self, from: d) {
+            messages = saved
+        }
     }
     
     func createRoom(name: String, isPublic: Bool = false, url: String? = nil) -> ChatRoom {
@@ -199,6 +210,7 @@ class AuraViewModel: ObservableObject {
         
         // Mark as sent
         if let idx = messages.firstIndex(where: { $0.id == m.id }) { messages[idx].status = .sent }
+        saveMessages()
     }
     
     func sendPhoto(roomId: String, imageData: Data, caption: String = "") {
@@ -207,6 +219,7 @@ class AuraViewModel: ObservableObject {
         messages.append(m)
         relay.sendImage(imageData, fileName: "photo_\(Date().timeIntervalSince1970).jpg")
         if let idx = messages.firstIndex(where: { $0.id == m.id }) { messages[idx].status = .sent }
+        saveMessages()
     }
     
     func pinMessage(_ msgId: String, roomId: String) {
