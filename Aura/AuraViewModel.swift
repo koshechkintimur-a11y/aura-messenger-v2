@@ -9,6 +9,7 @@ struct UserProfile: Identifiable, Codable, Equatable {
     var firstName: String = ""
     var lastName: String = ""
     var tag: String = ""
+    var about: String = ""
     var email: String = ""
     var avatarBase64: String? = nil
     var isOnline: Bool = false
@@ -73,11 +74,12 @@ class AuraViewModel: ObservableObject {
     @Published var isConnected: Bool = false
     @Published var onlineUsers: Set<String> = []
     @Published var validationError: String? = nil
+    @Published var folders: [String] = []
 
     // MARK: AppStorage keys
     private let profileKey = "aura_profile"
     private let roomsKey = "aura_rooms"
-    private let messagesKey = "aura_messages"
+    private let foldersKey = "aura_folders"
     private let userDefaults = UserDefaults.standard
 
     // MARK: Computed
@@ -92,9 +94,26 @@ class AuraViewModel: ObservableObject {
             .sorted { $0.timestamp < $1.timestamp }
     }
 
+    // MARK: Statistics
+    var totalChats: Int {
+        rooms.count
+    }
+
+    var totalMessages: Int {
+        messages.count
+    }
+
+    var storageUsed: Int64 {
+        let profileSize = (try? JSONEncoder().encode(profile).count) ?? 0
+        let roomsSize = (try? JSONEncoder().encode(rooms).count) ?? 0
+        let messagesSize = (try? JSONEncoder().encode(messages).count) ?? 0
+        return Int64(profileSize + roomsSize + messagesSize)
+    }
+
     init() {
         loadProfile()
         loadRooms()
+        loadFolders()
     }
 
     // MARK: Profile
@@ -131,8 +150,33 @@ class AuraViewModel: ObservableObject {
         if tag.rangeOfCharacter(from: allowed.inverted) != nil {
             return (false, "Тег может содержать только латиницу, цифры и _")
         }
-        // Check uniqueness locally (in real app would check server)
         return (true, nil)
+    }
+
+    // MARK: Folders
+
+    func loadFolders() {
+        if let data = userDefaults.data(forKey: foldersKey),
+           let saved = try? JSONDecoder().decode([String].self, from: data) {
+            folders = saved
+        }
+    }
+
+    private func persistFolders() {
+        if let data = try? JSONEncoder().encode(folders) {
+            userDefaults.set(data, forKey: foldersKey)
+        }
+    }
+
+    func addFolder(_ name: String) {
+        guard !name.isEmpty, !folders.contains(name) else { return }
+        folders.append(name)
+        persistFolders()
+    }
+
+    func removeFolder(_ name: String) {
+        folders.removeAll { $0 == name }
+        persistFolders()
     }
 
     // MARK: Rooms
@@ -150,10 +194,15 @@ class AuraViewModel: ObservableObject {
         }
     }
 
-    func createRoom(name: String, isPublic: Bool = false) -> ChatRoom {
+    func persistenceGuard() {
+        persistRooms()
+    }
+
+    func createRoom(name: String, isPublic: Bool = false, url: String? = nil) -> ChatRoom {
         var room = ChatRoom()
         room.name = name
         room.isPublic = isPublic
+        room.url = url
         room.creatorTag = profile.tag
         room.members = [profile.tag]
         room.admins = [profile.tag]
@@ -172,7 +221,6 @@ class AuraViewModel: ObservableObject {
 
     func leaveRoom(roomId: String) {
         guard let index = rooms.firstIndex(where: { $0.id == roomId }) else { return }
-        // Check admin transfer requirement
         if rooms[index].admins.contains(profile.tag) && rooms[index].admins.count == 1 {
             validationError = "Перед выходом передайте права администратора другому участнику"
             return
@@ -195,7 +243,6 @@ class AuraViewModel: ObservableObject {
         rooms.removeAll { $0.id == roomId }
         messages.removeAll { $0.roomId == roomId }
         persistRooms()
-        persistMessages()
         validationError = nil
     }
 
@@ -212,25 +259,12 @@ class AuraViewModel: ObservableObject {
         if !rooms[index].admins.contains(newAdminTag) {
             rooms[index].admins.append(newAdminTag)
         }
-        verificationError = nil
+        validationError = nil
         persistRooms()
         return true
     }
 
-    // MARK: Messages
-
-    func loadMessages() {
-        if let data = userDefaults.data(forKey: messagesKey),
-           let saved = try? JSONDecoder().decode([ChatMessage].self, from: data) {
-            messages = saved
-        }
-    }
-
-    private func persistMessages() {
-        if let data = try? JSONEncoder().encode(messages) {
-            userDefaults.set(data, forKey: messagesKey)
-        }
-    }
+    // MARK: Messages (in-memory only)
 
     func sendMessage(roomId: String, text: String, replyToId: String? = nil) -> ChatMessage {
         var msg = ChatMessage()
@@ -241,7 +275,6 @@ class AuraViewModel: ObservableObject {
         msg.replyToId = replyToId
         msg.status = .sent
         messages.append(msg)
-        persistMessages()
         return msg
     }
 
@@ -254,7 +287,6 @@ class AuraViewModel: ObservableObject {
         msg.imageBase64 = imageBase64
         msg.status = .sent
         messages.append(msg)
-        persistMessages()
         return msg
     }
 
@@ -269,7 +301,6 @@ class AuraViewModel: ObservableObject {
         }
         if let msgIndex = messages.firstIndex(where: { $0.id == messageId }) {
             messages[msgIndex].isPinned = true
-            persistMessages()
         }
     }
 
@@ -280,7 +311,6 @@ class AuraViewModel: ObservableObject {
             persistRooms()
             if let msgId = msgId, let msgIndex = messages.firstIndex(where: { $0.id == msgId }) {
                 messages[msgIndex].isPinned = false
-                persistMessages()
             }
         }
     }
@@ -294,7 +324,6 @@ class AuraViewModel: ObservableObject {
         forwarded.timestamp = Date()
         forwarded.status = .sent
         messages.append(forwarded)
-        persistMessages()
         return forwarded
     }
 
@@ -303,14 +332,26 @@ class AuraViewModel: ObservableObject {
             if messages[index].readBy[profile.tag] == nil {
                 messages[index].readBy[profile.tag] = Date()
                 messages[index].status = .read
-                persistMessages()
             }
         }
     }
 
     func deleteMessage(messageId: String) {
         messages.removeAll { $0.id == messageId }
-        persistMessages()
+    }
+
+    // MARK: Cache
+
+    func clearCache() {
+        let tempDir = FileManager.default.temporaryDirectory
+        do {
+            let contents = try FileManager.default.contentsOfDirectory(at: tempDir, includingPropertiesForKeys: nil)
+            for file in contents {
+                try? FileManager.default.removeItem(at: file)
+            }
+        } catch {
+            print("Failed to clear cache: \(error)")
+        }
     }
 
     // MARK: Online Status
@@ -335,16 +376,9 @@ class AuraViewModel: ObservableObject {
         rooms = []
         messages = []
         onlineUsers = []
+        folders = []
         userDefaults.removeObject(forKey: profileKey)
         userDefaults.removeObject(forKey: roomsKey)
-        userDefaults.removeObject(forKey: messagesKey)
-    }
-}
-
-// NOTE: Fix for validationError assignment
-extension AuraViewModel {
-    private var verificationError: String? {
-        get { validationError }
-        set { validationError = newValue }
+        userDefaults.removeObject(forKey: foldersKey)
     }
 }

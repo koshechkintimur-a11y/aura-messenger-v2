@@ -3,6 +3,7 @@ import PhotosUI
 
 struct CreateRoomView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var viewModel: AuraViewModel
 
     @State private var roomName: String = ""
     @State private var avatarItem: PhotosPickerItem?
@@ -11,9 +12,11 @@ struct CreateRoomView: View {
     @State private var roomURL: String = ""
 
     @State private var isCreated: Bool = false
+    @State private var createdRoomId: String = ""
     @State private var generatedLink: String = ""
     @State private var tagInput: String = ""
     @State private var showCopied: Bool = false
+    @State private var showInviteSheet: Bool = false
 
     private let accent = Color(hex: "#5A9FEE")
     private let background = Color(hex: "#0A0A0F")
@@ -27,8 +30,6 @@ struct CreateRoomView: View {
                     VStack(spacing: 24) {
                         if !isCreated {
                             createForm
-                        } else {
-                            createdView
                         }
                     }
                     .padding()
@@ -38,6 +39,10 @@ struct CreateRoomView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(background, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .navigationDestination(isPresented: $isCreated) {
+                ChatRoomView()
+                    .environmentObject(viewModel)
+            }
         }
     }
 
@@ -72,15 +77,55 @@ struct CreateRoomView: View {
                 }
             }
 
-            CustomTextField(title: "Название чата", text: $roomName)
+            // Название чата
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Название чата")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.gray)
+                TextField("", text: $roomName)
+                    .textFieldStyle(.plain)
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(Color.white.opacity(0.05))
+                    .cornerRadius(10)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                    )
+            }
 
-            Toggle("Публичный чат", isOn: $isPublic)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundColor(.white)
-                .tint(accent)
+            // Публичный чат toggle
+            VStack(alignment: .leading, spacing: 4) {
+                Toggle("Публичный чат", isOn: $isPublic)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.white)
+                    .tint(accent)
+                Text("Публичный чат доступен для поиска по URL. Приватный — только по приглашению.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
+                    .lineLimit(nil)
+            }
 
             if isPublic {
-                CustomTextField(title: "URL (латиница, цифры, '-')", text: $roomURL)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("URL чата")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.gray)
+                    TextField("", text: $roomURL)
+                        .textFieldStyle(.plain)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.white.opacity(0.05))
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        )
+                    Text("Уникальный адрес: aura.app/c/ВАШ-URL. Только латиница, цифры и дефис.")
+                        .font(.system(size: 12))
+                        .foregroundColor(.gray)
+                        .lineLimit(nil)
+                }
             }
 
             Button(action: createRoom) {
@@ -97,142 +142,13 @@ struct CreateRoomView: View {
 
     private func createRoom() {
         guard !roomName.isEmpty else { return }
-        generatedLink = "https://aura.chat/j/\(roomURL.isEmpty ? UUID().uuidString.prefix(8).lowercased() : roomURL)"
+        let slug = roomURL.isEmpty ? UUID().uuidString.prefix(8).lowercased() : roomURL
+        generatedLink = "https://aura.app/c/\(slug)"
+        let room = viewModel.createRoom(name: roomName, isPublic: isPublic, url: isPublic ? slug : nil)
+        createdRoomId = room.id
+        viewModel.currentRoomId = room.id
         withAnimation(.easeInOut(duration: 0.3)) {
             isCreated = true
         }
-    }
-
-    // MARK: - После создания
-
-    private var createdView: some View {
-        VStack(spacing: 24) {
-            // QR
-            VStack(spacing: 8) {
-                Text("QR-код приглашения")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.gray)
-                QRView(data: generatedLink)
-                    .frame(width: 180, height: 180)
-            }
-
-            // Ссылка
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Ссылка приглашения")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.gray)
-                HStack(spacing: 12) {
-                    Text(generatedLink)
-                        .font(.system(size: 13))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                    Spacer()
-                    Button(action: {
-                        UIPasteboard.general.string = generatedLink
-                        showCopied = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showCopied = false }
-                    }) {
-                        Image(systemName: "doc.on.doc")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(accent)
-                    }
-                }
-                .padding()
-                .background(Color.white.opacity(0.05))
-                .cornerRadius(10)
-            }
-
-            if showCopied {
-                Text("Скопировано!")
-                    .font(.system(size: 13))
-                    .foregroundColor(.green)
-                    .transition(.opacity)
-            }
-
-            // Тег + отправить
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Отправить по тегу")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.gray)
-                HStack(spacing: 12) {
-                    Text("@")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.gray)
-                    TextField("", text: $tagInput)
-                        .textFieldStyle(.plain)
-                        .foregroundColor(.white)
-                    Button(action: {}) {
-                        Text("Отправить")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(accent)
-                            .cornerRadius(8)
-                    }
-                }
-                .padding()
-                .background(Color.white.opacity(0.05))
-                .cornerRadius(10)
-            }
-
-            Spacer(minLength: 40)
-        }
-    }
-}
-
-// MARK: - Вспомогательные компоненты
-
-struct CustomTextField: View {
-    let title: String
-    @Binding var text: String
-
-    private let accent = Color(hex: "#5A9FEE")
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.gray)
-            TextField("", text: $text)
-                .textFieldStyle(.plain)
-                .foregroundColor(.white)
-                .padding()
-                .background(Color.white.opacity(0.05))
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                )
-        }
-    }
-}
-
-struct QRView: View {
-    let data: String
-    var body: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .fill(Color.white)
-            .overlay(
-                Image(systemName: "qrcode")
-                    .font(.system(size: 80))
-                    .foregroundColor(.black)
-            )
-    }
-}
-
-extension Color {
-    init(hex: String) {
-        let hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-        let clean = hexSanitized.hasPrefix("#") ? String(hexSanitized.dropFirst()) : hexSanitized
-        var rgb: UInt64 = 0
-        Scanner(string: clean).scanHexInt64(&rgb)
-        self.init(
-            .sRGB,
-            red: Double((rgb >> 16) & 0xFF) / 255.0,
-            green: Double((rgb >> 8) & 0xFF) / 255.0,
-            blue: Double(rgb & 0xFF) / 255.0,
-            opacity: 1.0
-        )
     }
 }

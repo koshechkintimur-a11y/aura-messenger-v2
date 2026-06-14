@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreImage.CIFilterBuiltins
 
 struct ChatRoomView: View {
     @EnvironmentObject var viewModel: AuraViewModel
@@ -9,7 +10,10 @@ struct ChatRoomView: View {
     @State private var showLinkAlert: Bool = false
     @State private var linkUrl: String = ""
     @State private var scrollToBottom: Bool = false
-    
+    @State private var showInviteSheet: Bool = false
+    @State private var showWeightPopup: Bool = false
+    @State private var weightPopupMessage: ChatMessage? = nil
+
     var room: ChatRoom? {
         viewModel.currentRoom
     }
@@ -18,26 +22,40 @@ struct ChatRoomView: View {
         VStack(spacing: 0) {
             // Header
             roomHeader
-            
+
             // Messages
             messagesList
-            
+
             // Reply indicator
             if let replyTo = replyToMessage {
                 replyIndicator
             }
-            
+
             // Input area
             inputArea
         }
-        .background(Color(.systemGray6))
+        .background(Color(hex: "#0A0A0F"))
         .navigationBarBackButtonHidden(true)
         .navigationBarHidden(true)
+        .sheet(isPresented: $showInviteSheet) {
+            inviteSheet
+        }
         .actionSheet(isPresented: $showActionSheet) {
             ActionSheet(
                 title: Text("Действия"),
                 buttons: actionSheetButtons
             )
+        }
+        .alert("Вес сообщения", isPresented: $showWeightPopup) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            if let msg = weightPopupMessage {
+                let originalSize = msg.text.utf8.count / 1024
+                let compressedSize = max(1, originalSize / 4)
+                Text("Исходный: \(originalSize)KB → Отправлено: \(compressedSize)KB")
+            } else {
+                Text("")
+            }
         }
         .alert("Открыть ссылку?", isPresented: $showLinkAlert) {
             Button("Отмена", role: .cancel) {}
@@ -55,22 +73,20 @@ struct ChatRoomView: View {
 
     private var roomHeader: some View {
         HStack(spacing: 12) {
-            // Back button
             Button(action: { /* pop */ }) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(Color(.systemGray6))
+                    .foregroundColor(.white)
             }
 
-            // Avatar
             ZStack {
                 Circle()
-                    .fill(Color(.systemGray6))
+                    .fill(Color.white.opacity(0.06))
                     .frame(width: 40, height: 40)
 
                 Text(room?.name.prefix(1).uppercased() ?? "?")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color(.systemGray6))
+                    .foregroundColor(.white)
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -83,33 +99,121 @@ struct ChatRoomView: View {
                     let memberCount = room?.members.count ?? 0
                     Text("\(memberCount) \(memberCount == 1 ? "участник" : "участников")")
                         .font(.system(size: 13))
-                        .foregroundColor(Color(.systemGray6))
+                        .foregroundColor(.gray)
 
-                    // Online status
                     if let firstMember = room?.members.first,
                        viewModel.isUserOnline(tag: firstMember) {
                         Circle()
-                            .fill(Color(.systemGray6))
+                            .fill(Color.green)
                             .frame(width: 6, height: 6)
                     } else {
                         Circle()
-                            .fill(Color(.systemGray5))
+                            .fill(Color.gray)
                             .frame(width: 6, height: 6)
                     }
                 }
             }
 
             Spacer()
+
+            // Invite button
+            Button(action: { showInviteSheet = true }) {
+                Image(systemName: "person.badge.plus")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(.white)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background((Color(.systemGray6)).opacity(0.95))
+        .background(Color(hex: "#0A0A0F").opacity(0.95))
         .overlay(
             Rectangle()
                 .frame(height: 0.5)
-                .foregroundColor(Color(.systemGray5)),
+                .foregroundColor(Color.white.opacity(0.1)),
             alignment: .bottom
         )
+    }
+
+    // MARK: - Invite Sheet
+
+    private var inviteSheet: some View {
+        VStack(spacing: 24) {
+            Text("Пригласить в чат")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.white)
+                .padding(.top)
+
+            // QR
+            VStack(spacing: 8) {
+                Text("QR-код приглашения")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.gray)
+                QRView(data: inviteLink)
+                    .frame(width: 180, height: 180)
+            }
+
+            // Link
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Ссылка приглашения")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.gray)
+                HStack(spacing: 12) {
+                    Text(inviteLink)
+                        .font(.system(size: 13))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    Spacer()
+                    Button(action: {
+                        UIPasteboard.general.string = inviteLink
+                    }) {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(Color(hex: "#5A9FEE"))
+                    }
+                }
+                .padding()
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(10)
+            }
+
+            // Tag
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Отправить по тегу")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.gray)
+                HStack(spacing: 12) {
+                    Text("@")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.gray)
+                    TextField("", text: .constant(""))
+                        .textFieldStyle(.plain)
+                        .foregroundColor(.white)
+                    Button(action: {}) {
+                        Text("Отправить")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(Color(hex: "#5A9FEE"))
+                            .cornerRadius(8)
+                    }
+                }
+                .padding()
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(10)
+            }
+
+            Spacer()
+        }
+        .padding()
+        .background(Color(hex: "#0A0A0F"))
+    }
+
+    private var inviteLink: String {
+        if let room = room {
+            return "https://aura.app/c/\(room.id)"
+        }
+        return "https://aura.app/c/invite"
     }
 
     // MARK: - Messages List
@@ -154,15 +258,14 @@ struct ChatRoomView: View {
 
         return HStack(alignment: .bottom, spacing: 8) {
             if showAvatar {
-                // Sender avatar
                 ZStack {
                     Circle()
-                        .fill(Color(.systemGray6))
+                        .fill(Color.white.opacity(0.06))
                         .frame(width: 28, height: 28)
 
                     Text(message.senderName.prefix(1).uppercased())
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(.systemGray6))
+                        .foregroundColor(.white)
                 }
             } else {
                 Spacer(minLength: 36)
@@ -172,35 +275,33 @@ struct ChatRoomView: View {
                 if !isOutgoing {
                     Text(message.senderName)
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(.systemGray6))
+                        .foregroundColor(.gray)
                         .padding(.horizontal, 4)
                 }
 
-                // Reply indicator
                 if let replyToId = message.replyToId,
                    let repliedMessage = viewModel.messages.first(where: { $0.id == replyToId }) {
                     HStack(spacing: 4) {
                         Rectangle()
-                            .fill(Color(.systemGray5))
+                            .fill(Color.white.opacity(0.1))
                             .frame(width: 3)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(repliedMessage.senderName)
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(Color(.systemGray6))
+                                .foregroundColor(.gray)
 
                             Text(repliedMessage.text)
                                 .font(.system(size: 12))
-                                .foregroundColor(Color(.systemGray6))
+                                .foregroundColor(.gray)
                                 .lineLimit(2)
                         }
                     }
                     .padding(8)
-                    .background(Color(.systemGray5))
+                    .background(Color.white.opacity(0.05))
                     .cornerRadius(8)
                 }
 
-                // Photo
                 if let imageBase64 = message.imageBase64,
                    let data = Data(base64Encoded: imageBase64),
                    let uiImage = UIImage(data: data) {
@@ -211,17 +312,15 @@ struct ChatRoomView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
 
-                // Text
                 if !message.text.isEmpty {
                     HStack(alignment: .bottom, spacing: 6) {
                         messageContent(message.text, isOutgoing: isOutgoing)
-                            .foregroundColor(isOutgoing ? .white : Color(.systemGray5))
+                            .foregroundColor(isOutgoing ? .white : .white)
 
-                        // Timestamp & status
                         HStack(spacing: 2) {
                             Text(formattedTime(message.timestamp))
                                 .font(.system(size: 11))
-                                .foregroundColor(isOutgoing ? Color(.systemGray5).opacity(0.7) : Color(.systemGray5))
+                                .foregroundColor(isOutgoing ? Color.white.opacity(0.7) : Color.gray)
 
                             if isOutgoing {
                                 messageStatusIcon(message)
@@ -233,15 +332,14 @@ struct ChatRoomView: View {
                     .padding(.vertical, 8)
                     .background(
                         RoundedRectangle(cornerRadius: 18)
-                            .fill(isOutgoing ? Color(.systemGray5) : Color(.systemGray5))
+                            .fill(isOutgoing ? Color(hex: "#5A9FEE") : Color.white.opacity(0.08))
                     )
                 }
 
-                // Forwarded indicator
                 if message.forwardedFromTag != nil {
                     Text("Переслано")
                         .font(.system(size: 11))
-                        .foregroundColor(Color(.systemGray6))
+                        .foregroundColor(.gray)
                         .padding(.horizontal, 4)
                 }
             }
@@ -251,6 +349,15 @@ struct ChatRoomView: View {
             }
         }
         .padding(.vertical, 2)
+        .contextMenu {
+            Button(action: {
+                weightPopupMessage = message
+                showWeightPopup = true
+            }) {
+                Text("Показать вес")
+                Image(systemName: "scalemass")
+            }
+        }
     }
 
     private func messageContent(_ text: String, isOutgoing: Bool) -> Text {
@@ -269,25 +376,25 @@ struct ChatRoomView: View {
             case .sent:
                 Image(systemName: "checkmark")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(Color(.systemGray5).opacity(0.7))
+                    .foregroundColor(Color.white.opacity(0.7))
             case .delivered:
                 Image(systemName: "checkmark")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(Color(.systemGray5).opacity(0.7))
+                    .foregroundColor(Color.white.opacity(0.7))
             case .read:
                 HStack(spacing: 0) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(Color(.systemGray5))
+                        .foregroundColor(.white)
                     Image(systemName: "checkmark")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(Color(.systemGray5))
+                        .foregroundColor(.white)
                         .offset(x: -4)
                 }
             default:
                 Image(systemName: "clock")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(Color(.systemGray5).opacity(0.5))
+                    .foregroundColor(Color.white.opacity(0.5))
             }
         }
     }
@@ -299,12 +406,12 @@ struct ChatRoomView: View {
             Spacer()
             Text(formattedDate(date))
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(Color(.systemGray5))
+                .foregroundColor(.gray)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(
                     Capsule()
-                        .fill(Color(.systemGray5).opacity(0.8))
+                        .fill(Color.white.opacity(0.08))
                 )
             Spacer()
         }
@@ -316,17 +423,17 @@ struct ChatRoomView: View {
     private var replyIndicator: some View {
         HStack(spacing: 8) {
             Rectangle()
-                .fill(Color(.systemGray5))
+                .fill(Color.white.opacity(0.1))
                 .frame(width: 3)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(replyToMessage?.senderName ?? "")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(Color(.systemGray6))
+                    .foregroundColor(.gray)
 
                 Text(replyToMessage?.text ?? "")
                     .font(.system(size: 13))
-                    .foregroundColor(Color(.systemGray6))
+                    .foregroundColor(.gray)
                     .lineLimit(1)
             }
 
@@ -335,16 +442,16 @@ struct ChatRoomView: View {
             Button(action: { replyToMessage = nil }) {
                 Image(systemName: "xmark")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(Color(.systemGray6))
+                    .foregroundColor(.gray)
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(Color(.systemGray5))
+        .background(Color.white.opacity(0.05))
         .overlay(
             Rectangle()
                 .frame(height: 0.5)
-                .foregroundColor(Color(.systemGray5)),
+                .foregroundColor(Color.white.opacity(0.1)),
             alignment: .top
         )
     }
@@ -354,21 +461,19 @@ struct ChatRoomView: View {
     private var inputArea: some View {
         VStack(spacing: 0) {
             Divider()
-                .background(Color(.systemGray5))
+                .background(Color.white.opacity(0.1))
 
             HStack(spacing: 12) {
-                // Paperclip
                 Button(action: { /* Attach file */ }) {
                     Image(systemName: "paperclip")
                         .font(.system(size: 22, weight: .medium))
-                        .foregroundColor(Color(.systemGray6))
+                        .foregroundColor(.gray)
                 }
 
-                // Text field
                 TextField("", text: $messageText)
                     .placeholder(when: messageText.isEmpty) {
                         Text("Сообщение...")
-                            .foregroundColor(Color(.systemGray5))
+                            .foregroundColor(.gray)
                     }
                     .font(.system(size: 16))
                     .foregroundColor(.white)
@@ -376,14 +481,13 @@ struct ChatRoomView: View {
                     .padding(.vertical, 10)
                     .background(
                         RoundedRectangle(cornerRadius: 20)
-                            .fill(Color(.systemGray6))
+                            .fill(Color.white.opacity(0.06))
                     )
 
-                // Send button
                 Button(action: sendMessage) {
                     Image(systemName: "paperplane.fill")
                         .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(messageText.isEmpty ? Color(.systemGray5) : Color(.systemGray5))
+                        .foregroundColor(messageText.isEmpty ? .gray : Color(hex: "#5A9FEE"))
                         .rotationEffect(.degrees(45))
                 }
                 .disabled(messageText.isEmpty)
@@ -391,7 +495,7 @@ struct ChatRoomView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
-        .background(Color(.systemGray6))
+        .background(Color(hex: "#0A0A0F"))
     }
 
     // MARK: - Actions
@@ -399,6 +503,11 @@ struct ChatRoomView: View {
     private var actionSheetButtons: [ActionSheet.Button] {
         guard let message = selectedMessage else { return [.cancel()] }
         var buttons: [ActionSheet.Button] = []
+
+        buttons.append(.default(Text("Показать вес")) {
+            weightPopupMessage = message
+            showWeightPopup = true
+        })
 
         buttons.append(.default(Text("Копировать")) {
             UIPasteboard.general.string = message.text
@@ -409,7 +518,6 @@ struct ChatRoomView: View {
         })
 
         buttons.append(.default(Text("Переслать")) {
-            // Forward logic
             if let roomId = viewModel.currentRoomId {
                 _ = viewModel.forwardMessage(messageId: message.id, fromRoomId: roomId, toRoomId: roomId)
             }
@@ -484,5 +592,32 @@ struct ChatRoomView: View {
             formatter.dateFormat = "d MMMM"
             return formatter.string(from: date)
         }
+    }
+}
+
+// MARK: - Placeholder Extension
+
+extension View {
+    func placeholder<Content: View>(when shouldShow: Bool, @ViewBuilder placeholder: () -> Content) -> some View {
+        overlay(
+            Group {
+                if shouldShow {
+                    placeholder()
+                }
+            }
+        )
+    }
+}
+
+struct QRView: View {
+    let data: String
+    var body: some View {
+        RoundedRectangle(cornerRadius: 12)
+            .fill(Color.white)
+            .overlay(
+                Image(systemName: "qrcode")
+                    .font(.system(size: 80))
+                    .foregroundColor(.black)
+            )
     }
 }
